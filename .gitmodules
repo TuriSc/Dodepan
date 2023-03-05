@@ -1,0 +1,15 @@
+[submodule "lib/RP2040-Button"]
+	path = lib/RP2040-Button
+	url = https://github.com/TuriSc/RP2040-Button
+[submodule "lib/RP2040-PWM-DMA-Audio"]
+	path = lib/RP2040-PWM-DMA-Audio
+	url = https://github.com/TuriSc/RP2040-PWM-DMA-Audio
+[submodule "lib/rpi-pico-mpu6050"]
+	path = lib/rpi-pico-mpu6050
+	url = https://github.com/HumansAreWeak/rpi-pico-mpu6050
+[submodule "lib/pico-mpr121"]
+	path = lib/pico-mpr121
+	url = https://github.com/antgon/pico-mpr121
+[submodule "lib/RP2040-Moving-Average"]
+	path = lib/RP2040-Moving-Average
+	url = https://github.com/TuriSc/RP2040-Moving-Average
