@@ -1,0 +1,9 @@
+[submodule "lib/RP2040-I2S-Audio-Mixer"]
+	path = lib/RP2040-I2S-Audio-Mixer
+	url = https://github.com/TuriSc/RP2040-I2S-Audio-Mixer
+[submodule "lib/pico-mpr121"]
+	path = lib/pico-mpr121
+	url = https://github.com/antgon/pico-mpr121
+[submodule "lib/RP2040-Button"]
+	path = lib/RP2040-Button
+	url = https://github.com/TuriSc/RP2040-Button
