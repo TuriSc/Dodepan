@@ -12,7 +12,6 @@ pico_sdk_init()
 
 set(LIBS
         lib/RP2040-Button/button.c
-        lib/RP2040-I2S-Audio-Mixer/mixer.c
         lib/RingBufMax/RingBufMax.c
         lib/tinyusb-midi/usb_descriptors.c
         )
@@ -33,7 +32,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         lib/RP2040-Button
         lib/rpi-pico-mpu6050/include
         lib/RingBufMax
-        lib/RP2040-I2S-Audio-Mixer
         )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
@@ -51,6 +49,12 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         tinyusb_device
         tinyusb_board
         pico_unique_id
+        )
+
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        PICO_AUDIO_I2S_MONO_INPUT=1
+        # PICO_AUDIO_I2S_DATA_PIN=28
+        # PICO_AUDIO_I2S_CLOCK_PIN_BASE=26
         )
 
 pico_set_program_name(${PROJECT_NAME} ${PROJECT_NAME})
