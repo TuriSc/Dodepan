@@ -17,8 +17,8 @@
 #include "mixer.h"          // https://github.com/TuriSc/RP2040-I2S-Audio-Mixer
 #include "button.h"         // https://github.com/TuriSc/RP2040-Button
 #include "mpr121.h"         // https://github.com/antgon/pico-mpr121
-#include "bsp/board.h"      // For Midi
-#include "tusb.h"           // For Midi
+// #include "bsp/board.h"      // For Midi // TODO RE-ENABLE
+// #include "tusb.h"           // For Midi // TODO RE-ENABLE
 #include "scales.h"
 #include "samples/notes.h"
 
@@ -60,13 +60,11 @@ RingBufMax vel_ringbuf;     // Ring buffer that returns its highest value.
 float gyro_multiplier;      // Will be set to 1 / (clock frequency * gyro's 131 LSB/°/sec).
 #endif
 
-#ifdef USE_DEMUX
-int8_t leds_on[3] =                 {-1, -1, -1};
-int8_t control_pins[4] =            {DEMUX_S0, DEMUX_S1, DEMUX_S2, DEMUX_S3};
+int8_t leds_on[3] =         {-1, -1, -1};
+int8_t control_pins[4] =    {DEMUX_S0, DEMUX_S1, DEMUX_S2, DEMUX_S3};
 
 uint8_t enable_pin;
 int8_t signal_pin;
-#endif
 
 void blink();
 
@@ -107,11 +105,9 @@ uint8_t get_scale_size(uint8_t s){
 }
 
 void update_key(){
-    #ifdef USE_DEMUX
     uint8_t key = tuning.key % 12;
     leds_on[1] = 9 + key_to_note_map[key];              // LEDs on C9 to C15
     leds_on[2] = (key_to_alteration_map[key] ? 8 : -1); // LED on C8, off if not an alteration
-    #endif
 }
 
 void update_scale(){
@@ -123,15 +119,13 @@ void update_scale(){
         j++;
         if (j >= scale_size) {j=0; octave_shift+=12;}
     }
-    #ifdef USE_DEMUX
     leds_on[0] = tuning.scale % 8;
-    #endif
 }
 
-static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3){
-    uint8_t msg[3] = { b1, b2, b3 };
-    return tud_midi_stream_write(jack_id, msg, 3);
-}
+// static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3){
+//     uint8_t msg[3] = { b1, b2, b3 };
+//     return tud_midi_stream_write(jack_id, msg, 3);
+// } // TODO RE-ENABLE
 
 void sendPitchWheelMessage(float deviation){
     static uint8_t throttle;
@@ -140,17 +134,17 @@ void sendPitchWheelMessage(float deviation){
     // with 8192 (0x2000) being the center value.
     unsigned int pitchval = (deviation+1.f)*8192;
     if (pitchval > 16383) pitchval = 16383;
-    tudi_midi_write24 (0, 0xE0, (pitchval & 0x7F), (pitchval >> 7) & 0x7F);
+    // tudi_midi_write24 (0, 0xE0, (pitchval & 0x7F), (pitchval >> 7) & 0x7F); // TODO RE-ENABLE
 }
 
 void note_on(uint8_t note){
     play_note(note, imu_data.velocity);
-    tudi_midi_write24(0, 0x90, note, imu_data.velocity);
+    // tudi_midi_write24(0, 0x90, note, imu_data.velocity); // TODO RE-ENABLE
     blink();
 }
 
 void note_off(uint8_t note){
-    tudi_midi_write24(0, 0x80, note, 0);
+    // tudi_midi_write24(0, 0x80, note, 0); // TODO RE-ENABLE
 }
 
 // Detuning affects the entire audio engine
@@ -166,7 +160,6 @@ void detune(float deviation){ // The range of the parameter is between -1 and 1 
     sendPitchWheelMessage(deviation);
 }
 
-#ifdef USE_DEMUX
 /* 74HC4067 Multiplexer/Demultiplexer functions */
 // The number of LEDs that are simultaneously on is always between 2 and 3.
 // leds_on[0] for the scale (LEDs on C0 to C7),
@@ -207,7 +200,6 @@ void demuxer_task(){
         }
     }
 }
-#endif
 
 /* MPR121 functions */
 
@@ -232,7 +224,7 @@ void mpr121_task(){
         mpr121_is_touched(i, &is_touched, &mpr121);
         if (is_touched != was_touched[i]){
             if(time_us_32() < 500000) return;  // Ignore readings for half a second,
-                                                // allowing the MPR121 to calibrate.
+                                               // allowing the MPR121 to calibrate.
             if (is_touched){
                 note_on(get_note_by_id(i));
             } else {
@@ -357,18 +349,19 @@ int main() {
     bi_decl(bi_1pin_with_name(BTN_KEY_UP_PIN, BTN_KEY_UP_DESCRIPTION));
     bi_decl(bi_1pin_with_name(BTN_SCALE_DOWN_PIN, BTN_SCALE_DOWN_DESCRIPTION));
     bi_decl(bi_1pin_with_name(BTN_SCALE_UP_PIN, BTN_SCALE_UP_DESCRIPTION));
-    #ifdef USE_DEMUX
     bi_decl(bi_1pin_with_name(DEMUX_EN, DEMUX_EN_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_SIG, DEMUX_SIG_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S0, DEMUX_S0_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S1, DEMUX_S1_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S2, DEMUX_S2_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S3, DEMUX_S3_DESCRIPTION));
-    #endif
     #ifdef USE_GYRO
     bi_decl(bi_1pin_with_name(MPU6050_SDA_PIN, MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPU6050_SCL_PIN, MPU6050_SCL_DESCRIPTION));
     #endif
+    bi_decl(bi_3pins_with_names(PICO_AUDIO_I2S_DATA_PIN, PICO_AUDIO_I2S_DATA_DESCRIPTION,
+    PICO_AUDIO_I2S_CLOCK_PIN_BASE, PICO_AUDIO_I2S_BCK_DESCRIPTION,
+    PICO_AUDIO_I2S_CLOCK_PIN_BASE+1, PICO_AUDIO_I2S_LRCK_DESCRIPTION));
 
     ap = init_audio();
 
@@ -403,12 +396,10 @@ int main() {
     button_t *scale_down_b = create_button(BTN_SCALE_DOWN_PIN, button_onchange);
     button_t *scale_up_b = create_button(BTN_SCALE_UP_PIN, button_onchange);
 
-    #ifdef USE_DEMUX
     demuxer_init(DEMUX_EN, DEMUX_SIG, DEMUX_S0, DEMUX_S1, DEMUX_S2, DEMUX_S3);
-    #endif
 
-    board_init(); // Midi
-    tusb_init(); // tinyusb
+    // board_init(); // Midi // TODO RE-ENABLE
+    // tusb_init(); // tinyusb // TODO RE-ENABLE
 
     // Non-time-critical routine, run by timer
     add_repeating_timer_ms(5000, low_battery_check_task, 0, &low_battery_check_timer);
@@ -427,13 +418,11 @@ int main() {
     while (1) { // Main loop
         mpr121_task();
         #ifdef USE_GYRO
-        imu_task(&imu_data);
-        detune(imu_data.deviation);
+        // imu_task(&imu_data); // TODO RE-ENABLE
+        // detune(imu_data.deviation); // TODO RE-ENABLE
         #endif
-        tud_task(); // tinyusb device task
-        #ifdef USE_DEMUX
+        // tud_task(); // tinyusb device task // TODO RE-ENABLE
         demuxer_task();
-        #endif
         audio_i2s_step(ap);
         sleep_ms(1); // Things tend to break without this line
     }

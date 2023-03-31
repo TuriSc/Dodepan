@@ -53,8 +53,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
         PICO_AUDIO_I2S_MONO_INPUT=1
-        # PICO_AUDIO_I2S_DATA_PIN=28
-        # PICO_AUDIO_I2S_CLOCK_PIN_BASE=26
+        PICO_AUDIO_I2S_DATA_PIN=0
+        PICO_AUDIO_I2S_CLOCK_PIN_BASE=1
         )
 
 pico_set_program_name(${PROJECT_NAME} ${PROJECT_NAME})

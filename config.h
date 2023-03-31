@@ -10,8 +10,8 @@
 #define USB_STR_PRODUCT         "Dodepan"
 
 /* I/O */
-#define SOUND_PIN                   2   // TODO
-#define SOUND_PIN_DESCRIPTION       "Audio output"
+#define SOUND_PIN                   3
+#define SOUND_PIN_DESCRIPTION       "PWM Audio output"
 #define LED_PIN                     18
 #define LED_PIN_DESCRIPTION         "Touch feedback LED"
 #define LOW_BATT_LED_PIN            17
@@ -19,13 +19,13 @@
 #define LOW_BATT_THRESHOLD          3250 // 3.25V
 #define PIN_BATT_LVL                29
 
-#define BTN_KEY_DOWN_PIN            19
+#define BTN_KEY_DOWN_PIN            21 // TODO all four to be updated on schematic TBC
 #define BTN_KEY_DOWN_DESCRIPTION    "Key down button"
-#define BTN_KEY_UP_PIN              20
+#define BTN_KEY_UP_PIN              23
 #define BTN_KEY_UP_DESCRIPTION      "Key up button"
-#define BTN_SCALE_DOWN_PIN          21
+#define BTN_SCALE_DOWN_PIN          24
 #define BTN_SCALE_DOWN_DESCRIPTION  "Scale down button"
-#define BTN_SCALE_UP_PIN            22
+#define BTN_SCALE_UP_PIN            25
 #define BTN_SCALE_UP_DESCRIPTION    "Scale up button"
 
 /* Notes */
@@ -52,22 +52,20 @@
 #endif
 
 /* 74HC4067 Multiplexer/Demultiplexer */
-#define USE_DEMUX                   // The demultiplexer is optional. It gives you a visual
-                                    // indication of which key and scale are selected.
-#ifdef USE_DEMUX
-#define DEMUX_EN                    14
+// The demultiplexer gives you a visual
+// indication of which key and scale are selected.
+#define DEMUX_EN                    16
 #define DEMUX_EN_DESCRIPTION        "Demux EN"
-#define DEMUX_SIG                   16
+#define DEMUX_SIG                   13
 #define DEMUX_SIG_DESCRIPTION       "Demux SIG"
-#define DEMUX_S0                    13
+#define DEMUX_S0                    14
 #define DEMUX_S0_DESCRIPTION        "Demux S0"
-#define DEMUX_S1                    12
+#define DEMUX_S1                    15
 #define DEMUX_S1_DESCRIPTION        "Demux S1"
 #define DEMUX_S2                    11
 #define DEMUX_S2_DESCRIPTION        "Demux S2"
-#define DEMUX_S3                    10
+#define DEMUX_S3                    12
 #define DEMUX_S3_DESCRIPTION        "Demux S3"
-#endif
 
 /* MPR121 */
 #define MPR121_I2C_PORT             i2c0
@@ -81,5 +79,12 @@
 
 #define MPR121_TOUCH_THRESHOLD      32
 #define MPR121_RELEASE_THRESHOLD    6
+
+/* I2S */
+#define PICO_AUDIO_I2S_DATA_PIN             0
+#define PICO_AUDIO_I2S_DATA_DESCRIPTION     "I2S DIN"
+#define PICO_AUDIO_I2S_CLOCK_PIN_BASE       1
+#define PICO_AUDIO_I2S_BCK_DESCRIPTION      "I2S BCK"
+#define PICO_AUDIO_I2S_LRCK_DESCRIPTION     "I2S LRCK" // Pinn must be BCK+1
 
 #endif /* CONFIG_H_ */
