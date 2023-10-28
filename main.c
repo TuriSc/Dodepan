@@ -20,7 +20,7 @@
 #include "audio.h"          // https://github.com/TuriSc/RP2040-PWM-DMA-Audio
 #include "moving_average.h" // https://github.com/TuriSc/RP2040-Moving-Average
 #include "haw/MPU6050.h"    // https://github.com/HumansAreWeak/rpi-pico-mpu6050
-#include "bsp/board_api.h"      // For Midi
+#include "bsp/board_api.h"  // For Midi
 #include "tusb.h"           // For Midi
 #include "scales.h"
 #include "samples/notes.h"
