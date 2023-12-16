@@ -4,6 +4,8 @@
  * v2.0.1b - 2023.03.19
  */
 
+// TODO 22050; 0x1000
+
 #include <stdio.h>
 #include "config.h"         // Most configurable options are here
 #include <math.h>
@@ -92,8 +94,10 @@ uint8_t get_note_by_id(uint8_t n){
 int play_note(uint8_t n, uint16_t velocity){
     if (n < LOWEST_NOTE || n > HIGHEST_NOTE) return -1;
     uint16_t volume = map(velocity, 64, 127, 128, 1024); // Audio volume ranges between 128 and 1024.
-    int id = audio_play_once(notes[n-LOWEST_NOTE], SAMPLE_LENGTH);
-    if (id >= 0) audio_source_set_volume(id, volume);
+    // int id = audio_play_once(notes[n-LOWEST_NOTE], SAMPLE_LENGTH);
+    int id = audio_play_once(notes[24], SAMPLE_LENGTH/2);
+    // if (id >= 0) audio_source_set_volume(id, volume);
+    if (id >= 0) audio_source_set_volume(id, 128);
     return id;
 }
 

@@ -1,4 +1,4 @@
-#define SAMPLE_LENGTH 11024 // The same for all notes, 500ms.
+#define SAMPLE_LENGTH 22050 // The same for all notes, 1s.
 
 #include "note36.h"
 #include "note37.h"

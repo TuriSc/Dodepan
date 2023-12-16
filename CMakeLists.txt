@@ -39,6 +39,9 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         .
         )
 
+set_target_properties(${PROJECT_NAME} PROPERTIES PICO_TARGET_LINKER_SCRIPT 
+    ${CMAKE_SOURCE_DIR}/memmap_custom.ld)
+
 target_link_libraries(${PROJECT_NAME} PRIVATE
         pico_stdlib
         hardware_i2c
