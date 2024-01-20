@@ -7,3 +7,9 @@
 [submodule "lib/RP2040-Button"]
 	path = lib/RP2040-Button
 	url = https://github.com/TuriSc/RP2040-Button
+[submodule "lib/rpi-pico-mpu6050"]
+	path = lib/rpi-pico-mpu6050
+	url = https://github.com/HumansAreWeak/rpi-pico-mpu6050
+[submodule "lib/RP2040-Battery-Check"]
+	path = lib/RP2040-Battery-Check
+	url = https://github.com/TuriSc/RP2040-Battery-Check

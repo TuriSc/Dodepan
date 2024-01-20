@@ -10,33 +10,32 @@ set(CMAKE_CXX_STANDARD 17)
  
 pico_sdk_init()
 
-set(LIBS
-        lib/RP2040-Button/button.c
-        lib/RingBufMax/RingBufMax.c
-        lib/tinyusb-midi/usb_descriptors.c
-        )
-
 add_executable(${PROJECT_NAME}
         main.c
-        )
+)
 
 add_subdirectory(lib/pico-mpr121/lib mpr121)
 add_subdirectory(lib/RP2040-I2S-Audio-Mixer i2s_audio_mixer)
+add_subdirectory(lib/RP2040-Button button)
+add_subdirectory(lib/rpi-pico-mpu6050 haw_mpu6050)
+add_subdirectory(lib/RingBufMax ringbufmax)
+add_subdirectory(lib/RP2040-Battery-Check battery_check)
 
 target_sources(${PROJECT_NAME} PRIVATE
-        scales.h
-        ${LIBS}
+        ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi/usb_descriptors.c
+        ${CMAKE_CURRENT_LIST_DIR}/imu.c
+        ${CMAKE_CURRENT_LIST_DIR}/demuxer.c
+        ${CMAKE_CURRENT_LIST_DIR}/touch.c
         )
 
 target_include_directories(${PROJECT_NAME} PRIVATE
-        lib/RP2040-Button
-        lib/rpi-pico-mpu6050/include
-        lib/RingBufMax
-        )
+)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-        lib/tinyusb-midi/
-        .
+        ${CMAKE_CURRENT_LIST_DIR}
+        ${CMAKE_CURRENT_LIST_DIR}/lib/rpi-pico-mpu6050/include/haw
+        ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi
+        ${CMAKE_CURRENT_LIST_DIR}/lib/RingBufMax
         )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES PICO_TARGET_LINKER_SCRIPT 
@@ -52,12 +51,10 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         tinyusb_device
         tinyusb_board
         pico_unique_id
-        )
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-        PICO_AUDIO_I2S_MONO_INPUT=1
-        PICO_AUDIO_I2S_DATA_PIN=0
-        PICO_AUDIO_I2S_CLOCK_PIN_BASE=1
+        button
+        haw_mpu6050
+        ringbufmax
+        battery_check
         )
 
 pico_set_program_name(${PROJECT_NAME} ${PROJECT_NAME})

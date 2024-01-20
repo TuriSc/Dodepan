@@ -3,7 +3,7 @@
 
 /* Device identifiers */
 #define PROGRAM_NAME            "Dodepan"
-#define PROGRAM_VERSION         "2.0.0"
+#define PROGRAM_VERSION         "2.1.0b"
 #define PROGRAM_DESCRIPTION     "Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out."
 #define PROGRAM_URL             "https://turiscandurra.com/circuits"
 #define USB_STR_MANUFACTURER    "TuriScandurra"
@@ -37,7 +37,6 @@
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // #define USE_GYRO                  // The IMU is optional, but gives you velocity and detune.
-#ifdef USE_GYRO
 #define MPU6050_I2C_PORT            i2c1
 #define MPU6050_SDA_PIN             6 // i2c1
 #define MPU6050_SDA_DESCRIPTION     "MPU6050 SDA"
@@ -49,7 +48,6 @@
 #define DETUNE_FACTOR               2.0f  // Higher values will detune more when tilted.
 #define GRAVITY_CONSTANT            9.80665f // Please do not modify the gravity of the earth!
 #define RAD_TO_DEG                  57.295779513f // = 1 / (PI / 180).
-#endif
 
 /* 74HC4067 Multiplexer/Demultiplexer */
 // The demultiplexer gives you a visual
@@ -81,10 +79,12 @@
 #define MPR121_RELEASE_THRESHOLD    6
 
 /* I2S */
-#define PICO_AUDIO_I2S_DATA_PIN             0
-#define PICO_AUDIO_I2S_DATA_DESCRIPTION     "I2S DIN"
-#define PICO_AUDIO_I2S_CLOCK_PIN_BASE       1
-#define PICO_AUDIO_I2S_BCK_DESCRIPTION      "I2S BCK"
-#define PICO_AUDIO_I2S_LRCK_DESCRIPTION     "I2S LRCK" // Pinn must be BCK+1
+#define I2S_DATA_PIN                0
+#define I2S_DATA_DESCRIPTION        "I2S DIN"
+#define I2S_CLOCK_PIN_BASE          1
+#define I2S_BCK_DESCRIPTION         "I2S BCK"
+#define I2S_LRCK_DESCRIPTION        "I2S LRCK" // Must be BCK+1
+
+#define SOUND_OUTPUT_FREQUENCY      22050
 
 #endif /* CONFIG_H_ */
