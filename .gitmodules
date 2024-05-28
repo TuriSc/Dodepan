@@ -13,3 +13,6 @@
 [submodule "lib/RP2040-Battery-Check"]
 	path = lib/RP2040-Battery-Check
 	url = https://github.com/TuriSc/RP2040-Battery-Check
+[submodule "lib/RP2040-Rotary-Encoder"]
+	path = lib/RP2040-Rotary-Encoder
+	url = https://github.com/TuriSc/RP2040-Rotary-Encoder

@@ -1,7 +1,7 @@
 /* Dodepan
  * Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out.
  * By Turi Scandurra – https://turiscandurra.com/circuits
- * v2.1.0b - 2024.01.20
+ * v2.1.1b - 2024.05.27
  */
 
 #include <stdio.h>
@@ -12,6 +12,7 @@
 #include "pico/binary_info.h"
 #include "mixer.h"          // https://github.com/TuriSc/RP2040-I2S-Audio-Mixer
 #include "sound_i2s.h"
+#include "encoder.h"        // https://github.com/TuriSc/RP2040-Rotary-Encoder
 #include "button.h"         // https://github.com/TuriSc/RP2040-Button
 // #include "bsp/board.h"      // For Midi
 // #include "tusb.h"           // For Midi
@@ -55,6 +56,13 @@ static const struct sound_i2s_config sound_config = {
   .bits_per_sample = 16,
   .pio_num         = 0, // 0 for pio0, 1 for pio1
 };
+
+// The encoder will change different values according to its current context
+uint8_t encoder_context;
+#define CTX_KEY 0
+#define CTX_SCALE 1
+#define CTX_INSTRUMENT 2
+#define CTX_VOLUME 3
 
 void blink();
 
@@ -161,34 +169,60 @@ void blink() { // LED blinks for 0.1 seconds after a note is played
     blink_alarm_id = add_alarm_in_us(100000, blink_complete, NULL, true);
 }
 
+void encoder_onchange(rotary_encoder_t *encoder) {
+    static long int last_position;
+    long int position = encoder->position / 4; // Adjust the encoder sensitivity here
+    int8_t direction = 0;
+    if(last_position != position) {
+    direction = (last_position < position ? 1 : -1);
+    }
+    last_position = position;
+
+    if (direction == 1) {
+        switch (encoder_context) {
+            case CTX_KEY:
+                if(tuning.key < NUM_ROOT_KEYS) tuning.key++;
+                update_key();
+            break;
+            case CTX_SCALE:
+                if(tuning.scale < num_scales - 1) tuning.scale++;
+                update_scale();
+            break;
+            case CTX_INSTRUMENT:
+            break;
+            case CTX_VOLUME:
+            break;
+        }
+    } else if (direction == -1) {
+        switch (encoder_context) {
+            case CTX_KEY:
+                if(tuning.key > 0) tuning.key--;
+                update_key();
+            break;
+            case CTX_SCALE:
+                if(tuning.scale > 0) tuning.scale--;
+                update_scale();
+            break;
+            case CTX_INSTRUMENT:
+            break;
+            case CTX_VOLUME:
+            break;
+        }
+    }
+}
+
 void button_onchange(button_t *button_p) {
-  button_t *button = (button_t*)button_p;
-
-  if(button->state) return; // Ignore button release, acting only on button press
-
-  switch(button->pin) {
-    case BTN_KEY_DOWN_PIN:
-        if(tuning.key > 0) tuning.key--;
-        update_key();
-    break;
-    case BTN_KEY_UP_PIN:
-        if(tuning.key < NUM_ROOT_KEYS) tuning.key++;
-        update_key();
-    break;
-    case BTN_SCALE_DOWN_PIN:
-        if(tuning.scale > 0) tuning.scale--;
-        update_scale();
-    break;
-    case BTN_SCALE_UP_PIN:
-        if(tuning.scale < num_scales - 1) tuning.scale++;
-        update_scale();
-    break;
-  }
+    button_t *button = (button_t*)button_p;
+    if(!button->state) { // Button pressed
+        encoder_context++;
+        if (encoder_context > 3) { encoder_context = CTX_KEY; }
+    }
 }
 
 void battery_low_callback(uint16_t battery_mv) {
     // Low battery detected
     gpio_put(LOW_BATT_LED_PIN, 1);
+    battery_check_stop(); // Stop the timer
 }
 
 void bi_decl_all() {
@@ -196,20 +230,19 @@ void bi_decl_all() {
     bi_decl(bi_program_description(PROGRAM_DESCRIPTION));
     bi_decl(bi_program_version_string(PROGRAM_VERSION));
     bi_decl(bi_program_url(PROGRAM_URL));
-    bi_decl(bi_1pin_with_name(SOUND_PIN, SOUND_PIN_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(LED_PIN, LED_PIN_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(SOUND_PIN, SOUND_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(LED_PIN, LED_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SDA_PIN, MPR121_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SCL_PIN, MPR121_SCL_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(BTN_KEY_DOWN_PIN, BTN_KEY_DOWN_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(BTN_KEY_UP_PIN, BTN_KEY_UP_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(BTN_SCALE_DOWN_PIN, BTN_SCALE_DOWN_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(BTN_SCALE_UP_PIN, BTN_SCALE_UP_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_EN, DEMUX_EN_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_SIG, DEMUX_SIG_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S0, DEMUX_S0_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S1, DEMUX_S1_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S2, DEMUX_S2_DESCRIPTION));
     bi_decl(bi_1pin_with_name(DEMUX_S3, DEMUX_S3_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(ENCODER_DT_PIN, ENCODER_DT_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(ENCODER_CLK_PIN, ENCODER_CLK_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(ENCODER_SWITCH_PIN, ENCODER_SWITCH_DESCRIPTION));
     #ifdef USE_GYRO
     bi_decl(bi_1pin_with_name(MPU6050_SDA_PIN, MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPU6050_SCL_PIN, MPU6050_SCL_DESCRIPTION));
@@ -253,12 +286,9 @@ int main() {
     adc_init();
     adc_gpio_init(PIN_BATT_LVL);
 
-    button_t *key_down_b = create_button(BTN_KEY_DOWN_PIN, button_onchange);
-    button_t *key_up_b = create_button(BTN_KEY_UP_PIN, button_onchange);
-    button_t *scale_down_b = create_button(BTN_SCALE_DOWN_PIN, button_onchange);
-    button_t *scale_up_b = create_button(BTN_SCALE_UP_PIN, button_onchange);
-
     demuxer_init(DEMUX_EN, DEMUX_SIG, DEMUX_S0, DEMUX_S1, DEMUX_S2, DEMUX_S3);
+    rotary_encoder_t *encoder = create_encoder(ENCODER_DT_PIN, ENCODER_CLK_PIN, encoder_onchange);
+    button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
 
     // board_init(); // Midi
     // tusb_init(); // tinyusb
@@ -266,6 +296,7 @@ int main() {
     // Non-time-critical routine, run by timer
     battery_check_init(5000, NULL, battery_low_callback);
 
+    encoder_context = CTX_KEY;
     tuning.key = 12; // C3
     update_key();
     update_scale();

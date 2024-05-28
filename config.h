@@ -3,7 +3,7 @@
 
 /* Device identifiers */
 #define PROGRAM_NAME            "Dodepan"
-#define PROGRAM_VERSION         "2.1.0b"
+#define PROGRAM_VERSION         "2.1.1b"
 #define PROGRAM_DESCRIPTION     "Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out."
 #define PROGRAM_URL             "https://turiscandurra.com/circuits"
 #define USB_STR_MANUFACTURER    "TuriScandurra"
@@ -11,22 +11,22 @@
 
 /* I/O */
 #define SOUND_PIN                   3
-#define SOUND_PIN_DESCRIPTION       "PWM Audio output"
+#define SOUND_DESCRIPTION           "PWM Audio output"
 #define LED_PIN                     18
-#define LED_PIN_DESCRIPTION         "Touch feedback LED"
+#define LED_DESCRIPTION             "Touch feedback LED"
 #define LOW_BATT_LED_PIN            17
 #define LOW_BATT_LED_DESCRIPTION    "Low battery LED"
 #define LOW_BATT_THRESHOLD          3250 // 3.25V
 #define PIN_BATT_LVL                29
 
-#define BTN_KEY_DOWN_PIN            21 // TODO all four to be updated on schematic TBC
-#define BTN_KEY_DOWN_DESCRIPTION    "Key down button"
-#define BTN_KEY_UP_PIN              23
-#define BTN_KEY_UP_DESCRIPTION      "Key up button"
-#define BTN_SCALE_DOWN_PIN          24
-#define BTN_SCALE_DOWN_DESCRIPTION  "Scale down button"
-#define BTN_SCALE_UP_PIN            25
-#define BTN_SCALE_UP_DESCRIPTION    "Scale up button"
+#define ENCODER_DT_PIN              8
+#define ENCODER_DT_DESCRIPTION      "Encoder data pin"
+#define ENCODER_CLK_PIN             9
+#define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
+#define ENCODER_SWITCH_PIN          3
+#define ENCODER_SWITCH_DESCRIPTION  "Encoder switch"
+#define DOUBLE_CLICK_THRESHOLD_US   250*1000 // 250ms, maximum interval between two button
+                                             // presses to trigger a double-click
 
 /* Notes */
 #define LOWEST_NOTE                 36
