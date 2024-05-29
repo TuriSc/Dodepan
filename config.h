@@ -10,8 +10,6 @@
 #define USB_STR_PRODUCT         "Dodepan"
 
 /* I/O */
-#define SOUND_PIN                   3
-#define SOUND_DESCRIPTION           "PWM Audio output"
 #define LED_PIN                     18
 #define LED_DESCRIPTION             "Touch feedback LED"
 #define LOW_BATT_LED_PIN            17
@@ -29,11 +27,9 @@
                                              // presses to trigger a double-click
 
 /* Notes */
-#define LOWEST_NOTE                 36
-#define HIGHEST_NOTE                110
-#define NUM_ROOT_KEYS               48  // Four octaves (for root keys)
-#define USE_16BIT_SAMPLES           // Use higher quality samples. You'll need
-                                    // a larger flash chip (like W25Q128)
+#define LOWEST_NOTE                 0
+#define HIGHEST_NOTE                127
+#define NUM_ROOT_KEYS               48  // Four octaves (for root keys) // TODO
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // #define USE_GYRO                  // The IMU is optional, but gives you velocity and detune.
@@ -78,13 +74,22 @@
 #define MPR121_TOUCH_THRESHOLD      32
 #define MPR121_RELEASE_THRESHOLD    6
 
-/* I2S */
-#define I2S_DATA_PIN                0
-#define I2S_DATA_DESCRIPTION        "I2S DIN"
-#define I2S_CLOCK_PIN_BASE          1
-#define I2S_BCK_DESCRIPTION         "I2S BCK"
-#define I2S_LRCK_DESCRIPTION        "I2S LRCK" // Must be BCK+1
-
+/* Audio */
 #define SOUND_OUTPUT_FREQUENCY      22050
+
+#if USE_AUDIO_PWM
+    #define PWM_AUDIO_PIN_RIGHT     1
+    #define PWM_AUDIO_RIGHT_DESCRIPTION "Right PWM audio output"
+    #define PWM_AUDIO_PIN_LEFT      0
+    #define PWM_AUDIO_LEFT_DESCRIPTION  "Left PWM audio output"
+#elif USE_AUDIO_I2S
+    #include "sound_i2s.h"
+    #define I2S_DATA_PIN             2 // -> I2S DIN
+    #define I2S_DATA_DESCRIPTION     "I2S DIN"
+    #define I2S_CLOCK_PIN_BASE       0 // -> I2S BCK
+    #define I2S_BCK_DESCRIPTION      "I2S BCK"
+    #define I2S_LRCK_DESCRIPTION     "I2S LRCK" // Must be BCK+1
+    // The third required connection is GPIO 1 -> I2S LRCK (BCK+1)
+#endif
 
 #endif /* CONFIG_H_ */

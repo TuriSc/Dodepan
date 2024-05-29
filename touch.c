@@ -5,7 +5,6 @@
 #include "mpr121.h"         // https://github.com/antgon/pico-mpr121
 #include <config.h>
 #include "touch.h"
-// #include "synth.h"
 
 struct mpr121_sensor mpr121;
 
@@ -32,9 +31,9 @@ void mpr121_task(){
             if(time_us_32() < 500000) return;  // Ignore readings for half a second,
                                                // allowing the MPR121 to calibrate.
             if (is_touched){
-                note_on(get_note_by_id(i));
+                trigger_note_on(get_note_by_id(i));
             } else {
-                note_off(get_note_by_id(i));
+                trigger_note_off(get_note_by_id(i));
             }
             was_touched[i] = is_touched;
         }

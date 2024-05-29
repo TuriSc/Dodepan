@@ -15,7 +15,7 @@ add_executable(${PROJECT_NAME}
 )
 
 add_subdirectory(lib/pico-mpr121/lib mpr121)
-add_subdirectory(lib/RP2040-I2S-Audio-Mixer i2s_audio_mixer)
+add_subdirectory(lib/RP2040-pico_synth_ex pico_synth_ex_i2s)
 add_subdirectory(lib/RP2040-Button button)
 add_subdirectory(lib/rpi-pico-mpu6050 haw_mpu6050)
 add_subdirectory(lib/RingBufMax ringbufmax)
@@ -36,8 +36,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/lib/RingBufMax
         )
 
-# set_target_properties(${PROJECT_NAME} PROPERTIES PICO_TARGET_LINKER_SCRIPT 
-#     ${CMAKE_SOURCE_DIR}/memmap_custom.ld)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+        # Define only one audio output
+        # USE_AUDIO_PWM=1
+        USE_AUDIO_I2S=1
+        )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
         pico_stdlib
@@ -45,7 +48,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_dma
         hardware_adc
         pico-mpr121
-        i2s_audio_mixer
+        pico_synth_ex_i2s
         # tinyusb_device
         # tinyusb_board
         pico_unique_id

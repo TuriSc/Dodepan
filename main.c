@@ -10,18 +10,30 @@
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 #include "pico/binary_info.h"
-#include "mixer.h"          // https://github.com/TuriSc/RP2040-I2S-Audio-Mixer
-#include "sound_i2s.h"
+#include "pico_synth_ex.h"  // https://github.com/TuriSc/RP2040-pico_synth_ex
 #include "encoder.h"        // https://github.com/TuriSc/RP2040-Rotary-Encoder
 #include "button.h"         // https://github.com/TuriSc/RP2040-Button
 // #include "bsp/board.h"      // For Midi
 // #include "tusb.h"           // For Midi
 #include "scales.h"
-#include "samples/notes.h"
 #include "battery-check.h"
 #include "imu.h"
 #include "demuxer.h"
 #include "touch.h"
+
+/* Audio setup */
+#if USE_AUDIO_I2S
+    #include "sound_i2s.h"
+    static const struct sound_i2s_config sound_config = {
+        .pin_sda         = I2S_DATA_PIN,
+        .pin_scl         = I2S_CLOCK_PIN_BASE,
+        .pin_ws          = I2S_CLOCK_PIN_BASE + 1,
+        .sample_rate     = SOUND_OUTPUT_FREQUENCY,
+        .pio_num         = 0, // 0 for pio0, 1 for pio1
+    };
+
+    repeating_timer_t i2s_timer;
+#endif
 
 /* Globals */
 typedef struct {
@@ -48,16 +60,7 @@ static alarm_id_t power_on_alarm_id;
 uint8_t audio_pin_slice;
 uint8_t num_scales = sizeof(scales)/sizeof(scales[0]);
 
-static const struct sound_i2s_config sound_config = {
-  .pin_sda         = I2S_DATA_PIN,
-  .pin_scl         = I2S_CLOCK_PIN_BASE,
-  .pin_ws          = I2S_CLOCK_PIN_BASE + 1,
-  .sample_rate     = SOUND_OUTPUT_FREQUENCY,
-  .bits_per_sample = 16,
-  .pio_num         = 0, // 0 for pio0, 1 for pio1
-};
-
-// The encoder will change different values according to its current context
+// The encoder affects different parameters according to its current context
 uint8_t encoder_context;
 #define CTX_KEY 0
 #define CTX_SCALE 1
@@ -76,16 +79,6 @@ inline int map(int x, int in_min, int in_max, int out_min, int out_max) {
 
 uint8_t get_note_by_id(uint8_t n) {
     return LOWEST_NOTE + tuning.key + tuning.extended_scale[n];
-}
-
-int play_note(uint8_t n, uint16_t velocity) {
-    if (n < LOWEST_NOTE || n > HIGHEST_NOTE) return -1;
-    uint16_t volume = map(velocity, 64, 127, 128, 1024); // Audio volume ranges between 128 and 1024.
-    // int id = audio_play_once(notes[n-LOWEST_NOTE], SAMPLE_LENGTH);
-    int id = audio_play_once(notes[24], SAMPLE_LENGTH/2);
-    // if (id >= 0) audio_source_set_volume(id, volume);
-    if (id >= 0) audio_source_set_volume(id, 128);
-    return id;
 }
 
 uint8_t get_scale_size(uint8_t s) {
@@ -128,13 +121,17 @@ void sendPitchWheelMessage(float deviation) {
     // tudi_midi_write24 (0, 0xE0, (pitchval & 0x7F), (pitchval >> 7) & 0x7F);
 }
 
-void note_on(uint8_t note) {
-    play_note(note, imu_data.velocity);
+void trigger_note_on(uint8_t note) {
+    if (note < LOWEST_NOTE || note > HIGHEST_NOTE) return;
+    // uint16_t volume = map(imu_data.velocity, 64, 127, 128, 1024); // Audio volume ranges between 128 and 1024. // TODO
+    // TODO set sustain level to converted imu_data.velocity
+    note_on(note - LOWEST_NOTE);
     // tudi_midi_write24(0, 0x90, note, imu_data.velocity);
     blink();
 }
 
-void note_off(uint8_t note) {
+void trigger_note_off(uint8_t note) {
+    note_off(note - LOWEST_NOTE);
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
@@ -230,7 +227,6 @@ void bi_decl_all() {
     bi_decl(bi_program_description(PROGRAM_DESCRIPTION));
     bi_decl(bi_program_version_string(PROGRAM_VERSION));
     bi_decl(bi_program_url(PROGRAM_URL));
-    bi_decl(bi_1pin_with_name(SOUND_PIN, SOUND_DESCRIPTION));
     bi_decl(bi_1pin_with_name(LED_PIN, LED_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SDA_PIN, MPR121_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SCL_PIN, MPR121_SCL_DESCRIPTION));
@@ -247,18 +243,37 @@ void bi_decl_all() {
     bi_decl(bi_1pin_with_name(MPU6050_SDA_PIN, MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPU6050_SCL_PIN, MPU6050_SCL_DESCRIPTION));
     #endif
+    #if USE_AUDIO_PWM
+    bi_decl(bi_2pins_with_names(PWM_AUDIO_PIN_RIGHT, PWM_AUDIO_RIGHT_DESCRIPTION,
+    PWM_AUDIO_PIN_LEFT, PWM_AUDIO_LEFT_DESCRIPTION));
+    #elif USE_AUDIO_I2S
     bi_decl(bi_3pins_with_names(I2S_DATA_PIN, I2S_DATA_DESCRIPTION,
     I2S_CLOCK_PIN_BASE, I2S_BCK_DESCRIPTION,
     I2S_CLOCK_PIN_BASE+1, I2S_LRCK_DESCRIPTION));
+    #endif
 }
 
 int main() {
+    // Set the system clock.
+    // If you run it at the default speed, expect an offset
+    // with the output frequencies.
+    set_sys_clock_khz(FCLKSYS / 1000, true);
+
     stdio_init_all();
 
     bi_decl_all();
 
-    sound_i2s_init(&sound_config);
-    sound_i2s_playback_start();
+    // Start the synth.
+    #if USE_AUDIO_PWM
+        // Pass the two output GPIOs as arguments.
+        // Left channel must be active.
+        // For a mono setup, the right channel can be disabled by passing -1.
+        PWMA_init(PWM_AUDIO_PIN_RIGHT, PWM_AUDIO_PIN_LEFT);
+    #elif USE_AUDIO_I2S
+        sound_i2s_init(&sound_config);
+        sound_i2s_playback_start();
+        add_repeating_timer_ms(10, i2s_timer_callback, NULL, &i2s_timer);
+    #endif
 
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
@@ -308,14 +323,13 @@ int main() {
     power_on_alarm_id = add_alarm_in_ms(500, power_on_complete, NULL, true);
     
     while (1) { // Main loop
-        mpr121_task();
+        // mpr121_task();
         #ifdef USE_GYRO
         imu_task(&imu_data);
         detune(imu_data.deviation);
         #endif
         // tud_task(); // tinyusb device task
         demuxer_task();
-        audio_i2s_step();
         sleep_ms(1); // Things tend to break without this line
     }
 }
