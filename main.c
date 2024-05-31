@@ -78,7 +78,7 @@ inline int map(int x, int in_min, int in_max, int out_min, int out_max) {
 /* Note and audio functions */
 
 uint8_t get_note_by_id(uint8_t n) {
-    return LOWEST_NOTE + tuning.key + tuning.extended_scale[n];
+    return tuning.key + tuning.extended_scale[n];
 }
 
 uint8_t get_scale_size(uint8_t s) {
@@ -122,16 +122,15 @@ void sendPitchWheelMessage(float deviation) {
 }
 
 void trigger_note_on(uint8_t note) {
-    if (note < LOWEST_NOTE || note > HIGHEST_NOTE) return;
     // uint16_t volume = map(imu_data.velocity, 64, 127, 128, 1024); // Audio volume ranges between 128 and 1024. // TODO
     // TODO set sustain level to converted imu_data.velocity
-    note_on(note - LOWEST_NOTE);
+    note_on(note);
     // tudi_midi_write24(0, 0x90, note, imu_data.velocity);
     blink();
 }
 
 void trigger_note_off(uint8_t note) {
-    note_off(note - LOWEST_NOTE);
+    note_off(note);
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
@@ -178,7 +177,8 @@ void encoder_onchange(rotary_encoder_t *encoder) {
     if (direction == 1) {
         switch (encoder_context) {
             case CTX_KEY:
-                if(tuning.key < NUM_ROOT_KEYS) tuning.key++;
+                // 100 (E7) is the highest root note that can be set
+                if(tuning.key < 99) tuning.key++;
                 update_key();
             break;
             case CTX_SCALE:

@@ -26,11 +26,6 @@
 #define DOUBLE_CLICK_THRESHOLD_US   250*1000 // 250ms, maximum interval between two button
                                              // presses to trigger a double-click
 
-/* Notes */
-#define LOWEST_NOTE                 0
-#define HIGHEST_NOTE                127
-#define NUM_ROOT_KEYS               48  // Four octaves (for root keys) // TODO
-
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // #define USE_GYRO                  // The IMU is optional, but gives you velocity and detune.
 #define MPU6050_I2C_PORT            i2c1
