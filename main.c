@@ -312,7 +312,7 @@ int main() {
     battery_check_init(5000, NULL, battery_low_callback);
 
     encoder_context = CTX_KEY;
-    tuning.key = 12; // C3
+    tuning.key = 48; // C3
     update_key();
     update_scale();
 
@@ -323,7 +323,7 @@ int main() {
     power_on_alarm_id = add_alarm_in_ms(500, power_on_complete, NULL, true);
     
     while (1) { // Main loop
-        // mpr121_task();
+        mpr121_task();
         #ifdef USE_GYRO
         imu_task(&imu_data);
         detune(imu_data.deviation);
