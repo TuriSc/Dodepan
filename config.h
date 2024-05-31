@@ -17,11 +17,11 @@
 #define LOW_BATT_THRESHOLD          3250 // 3.25V
 #define PIN_BATT_LVL                29
 
-#define ENCODER_DT_PIN              8
-#define ENCODER_DT_DESCRIPTION      "Encoder data pin"
-#define ENCODER_CLK_PIN             9
+#define ENCODER_CLK_PIN             19
 #define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
-#define ENCODER_SWITCH_PIN          3
+#define ENCODER_DT_PIN              20
+#define ENCODER_DT_DESCRIPTION      "Encoder data pin"
+#define ENCODER_SWITCH_PIN          21
 #define ENCODER_SWITCH_DESCRIPTION  "Encoder switch"
 #define DOUBLE_CLICK_THRESHOLD_US   250*1000 // 250ms, maximum interval between two button
                                              // presses to trigger a double-click
