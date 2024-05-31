@@ -43,8 +43,9 @@ typedef struct {
                                     // repeated notes shifted up in octaves,
                                     // so that we always end up with 12 notes.
 } Tuning;
-
 Tuning tuning;
+
+uint8_t instrument;
 
 struct audio_buffer_pool *ap;
 
@@ -104,6 +105,42 @@ void update_scale() {
         if (j >= scale_size) {j=0; octave_shift+=12;}
     }
     set_led(SCALE, tuning.scale % 8);
+}
+
+void set_instrument(uint8_t instr) {
+    switch (instr) {
+        case 0:
+            load_preset((Preset_t) { 0, 1, 12, 2, 21, 72, 5, 19, 38, 14, 2, 2}); // Default
+        break;
+        case 1:
+            control_message(PRESET_0);
+        break;
+        case 2:
+            control_message(PRESET_1);
+        break;
+        case 3:
+            control_message(PRESET_2);
+        break;
+        case 4:
+            control_message(PRESET_3);
+        break;
+        case 5:
+            control_message(PRESET_5);
+        break;
+        case 6:
+            control_message(PRESET_6);
+        break;
+        case 7:
+            control_message(PRESET_7);
+        break;
+        case 8:
+            control_message(PRESET_8);
+        break;
+        case 9:
+            control_message(PRESET_9);
+        break;
+    }
+    instrument = instr;
 }
 
 // static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
@@ -186,6 +223,7 @@ void encoder_onchange(rotary_encoder_t *encoder) {
                 update_scale();
             break;
             case CTX_INSTRUMENT:
+                if(instrument < 9) set_instrument(instrument + 1);
             break;
             case CTX_VOLUME:
             break;
@@ -201,6 +239,7 @@ void encoder_onchange(rotary_encoder_t *encoder) {
                 update_scale();
             break;
             case CTX_INSTRUMENT:
+                if(instrument > 0) set_instrument(instrument - 1);
             break;
             case CTX_VOLUME:
             break;
@@ -274,6 +313,7 @@ int main() {
         sound_i2s_playback_start();
         add_repeating_timer_ms(10, i2s_timer_callback, NULL, &i2s_timer);
     #endif
+    set_instrument(0);
 
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
