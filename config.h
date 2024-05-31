@@ -27,7 +27,7 @@
                                              // presses to trigger a double-click
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
-// #define USE_GYRO                  // The IMU is optional, but gives you velocity and detune.
+#define USE_GYRO                    // The IMU is optional, but gives you velocity and bending.
 #define MPU6050_I2C_PORT            i2c1
 #define MPU6050_SDA_PIN             6 // i2c1
 #define MPU6050_SDA_DESCRIPTION     "MPU6050 SDA"
@@ -36,7 +36,8 @@
 
 #define MPU6050_ADDRESS             0x68
 #define TAP_SENSITIVITY             5.0f // Lower values trigger a higher velocity.
-#define DETUNE_FACTOR               2.0f  // Higher values will detune more when tilted.
+#define BENDING_FACTOR              2.0f  // Higher values will bend more when tilted.
+#define REST_ANGLE                  90.0f // Change to 0.0f if your sensor is mounted upright.
 #define GRAVITY_CONSTANT            9.80665f // Please do not modify the gravity of the earth!
 #define RAD_TO_DEG                  57.295779513f // = 1 / (PI / 180).
 

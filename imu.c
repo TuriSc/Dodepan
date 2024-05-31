@@ -53,10 +53,11 @@ void imu_task(Imu_data * data){
     accel_total = sqrt((accel->x*accel->x)+(accel->y*accel->y)+(accel->z*accel->z)); 
     pitch_accel = asin((float)accel->y/accel_total) * RAD_TO_DEG;                                         
     pitch = (pitch + pitch_accel) / 2;
-    // Clamp the range of velocity.
-    velocity_raw = (uint16_t)fmap(accel_total - GRAVITY_CONSTANT, 0.0f, TAP_SENSITIVITY, 0.0f, 63.0f);
-    uint16_t velocity_corrected = 64 + ringBufMax(&vel_ringbuf, velocity_raw);
-    velocity_corrected = clamp(velocity_corrected, 64, 127);
-    data->velocity = velocity_corrected;
-    data->deviation = (((pitch + 90.0f) * 2.0 / 180.0f) - 1.0f) * DETUNE_FACTOR;
+    // Clamp the velocity range
+    // velocity_raw = (uint16_t)fmap(accel_total - GRAVITY_CONSTANT, 0.0f, TAP_SENSITIVITY, 0.0f, 63.0f);
+    // uint16_t velocity_corrected = 64 + ringBufMax(&vel_ringbuf, velocity_raw);
+    // velocity_corrected = clamp(velocity_corrected, 64, 127);
+    // data->velocity = velocity_corrected;
+    data->velocity = ringBufMax(&vel_ringbuf, data->velocity);
+    data->deviation = (((pitch + REST_ANGLE) * 2.0 / 180.0f) - 1.0f) * BENDING_FACTOR;
 }

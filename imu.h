@@ -8,7 +8,7 @@ extern "C" {
 
 typedef struct {            // Accelerometer/gyroscope data, with fallback.
     uint16_t velocity;      // Velocity for Midi ranges between 64 and 127.
-    float deviation;        // Detuning amount.
+    float deviation;        // Bending amount.
 } Imu_data;
 
 void imu_init();

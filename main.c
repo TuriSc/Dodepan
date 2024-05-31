@@ -66,7 +66,6 @@ uint8_t encoder_context;
 #define CTX_KEY 0
 #define CTX_SCALE 1
 #define CTX_INSTRUMENT 2
-#define CTX_VOLUME 3
 
 void blink();
 
@@ -110,7 +109,7 @@ void update_scale() {
 void set_instrument(uint8_t instr) {
     switch (instr) {
         case 0:
-            load_preset((Preset_t) { 0, 1, 12, 2, 21, 72, 5, 19, 38, 14, 2, 2}); // Default
+            load_preset((Preset_t) { 0, 1, 12, 16, 32, 72, 5, 19, 38, 14, 2, 2}); // Default
         break;
         case 1:
             control_message(PRESET_0);
@@ -148,19 +147,11 @@ void set_instrument(uint8_t instr) {
 //     return tud_midi_stream_write(jack_id, msg, 3);
 // }
 
-void sendPitchWheelMessage(float deviation) {
-    static uint8_t throttle;
-    if(throttle++ % 10 != 0) return;
-    // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
-    // with 8192 (0x2000) being the center value.
-    unsigned int pitchval = (deviation+1.f)*8192;
-    if (pitchval > 16383) pitchval = 16383;
-    // tudi_midi_write24 (0, 0xE0, (pitchval & 0x7F), (pitchval >> 7) & 0x7F);
-}
-
 void trigger_note_on(uint8_t note) {
     // uint16_t volume = map(imu_data.velocity, 64, 127, 128, 1024); // Audio volume ranges between 128 and 1024. // TODO
-    // TODO set sustain level to converted imu_data.velocity
+    // TODO
+    // int8_t sustain = 32 + (32 * imu_data.velocity);
+    // set_parameter(EG_SUSTAIN_LEVEL, )
     note_on(note);
     // tudi_midi_write24(0, 0x90, note, imu_data.velocity);
     blink();
@@ -171,17 +162,27 @@ void trigger_note_off(uint8_t note) {
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
-// Detuning affects the entire audio engine
-void detune(float deviation) { // The range of the parameter is between -1 and 1 inclusive.
-    // TODO: detune via I2S
-    // static float divider;
-    // static const float unaltered_divider = 5.5796f;
-    // if (deviation == 0) divider = unaltered_divider;
-    // else if (deviation == 1) divider = 5.91138f;
-    // else if (deviation == -1) divider = 5.26644f;
-    // else divider = unaltered_divider * pow(1.05946f, deviation); // Chromatic scaling of the divider
-    // pwm_set_clkdiv(audio_pin_slice, divider);
-    sendPitchWheelMessage(deviation);
+void bending(float deviation) {
+    // Use the IMU to alter a parameter according to device tilting.
+    // The range of the deviation parameter is between -1 and 1 inclusive.
+    // Parameters have a minimum, a maximum, and a center value, for example
+    // FILTER_CUTOFF goes from 0 to 120, with 60 being the center value.
+    int8_t cutoff = 60 + (60 * deviation);
+    set_parameter(FILTER_CUTOFF, cutoff);
+
+    // For pitch bending use this instead:
+    // int8_t pitch = 16 + (32 * deviation);
+    // set_parameter(OSC_2_FINE_PITCH, pitch);
+
+    // Prepare Midi message
+    static uint8_t throttle;
+    if(throttle++ % 10 != 0) return; // Limit the message rate
+    // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
+    // with 8192 (0x2000) being the center value.
+    unsigned int pitchval = (deviation+1.f)*8192;
+    if (pitchval > 16383) pitchval = 16383;
+    // Send Midi message
+    // tudi_midi_write24 (0, 0xE0, (pitchval & 0x7F), (pitchval >> 7) & 0x7F);
 }
 
 /* I/O functions */
@@ -225,8 +226,6 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             case CTX_INSTRUMENT:
                 if(instrument < 9) set_instrument(instrument + 1);
             break;
-            case CTX_VOLUME:
-            break;
         }
     } else if (direction == -1) {
         switch (encoder_context) {
@@ -240,8 +239,6 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             break;
             case CTX_INSTRUMENT:
                 if(instrument > 0) set_instrument(instrument - 1);
-            break;
-            case CTX_VOLUME:
             break;
         }
     }
@@ -366,7 +363,7 @@ int main() {
         mpr121_task();
         #ifdef USE_GYRO
         imu_task(&imu_data);
-        detune(imu_data.deviation);
+        bending(imu_data.deviation);
         #endif
         // tud_task(); // tinyusb device task
         demuxer_task();
