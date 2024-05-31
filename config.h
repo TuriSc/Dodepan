@@ -36,8 +36,6 @@
 
 #define MPU6050_ADDRESS             0x68
 #define TAP_SENSITIVITY             5.0f // Lower values trigger a higher velocity.
-#define BENDING_FACTOR              2.0f  // Higher values will bend more when tilted.
-#define REST_ANGLE                  90.0f // Change to 0.0f if your sensor is mounted upright.
 #define GRAVITY_CONSTANT            9.80665f // Please do not modify the gravity of the earth!
 #define RAD_TO_DEG                  57.295779513f // = 1 / (PI / 180).
 

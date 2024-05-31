@@ -3,22 +3,14 @@
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
 #include "MPU6050.h"
-#include "RingBufMax.h"
 #include <config.h>
 #include <math.h>
 #include "imu.h"
 
 mpu6050_t mpu6050;
-RingBufMax vel_ringbuf;     // Ring buffer that returns its highest value.
 float gyro_multiplier;      // Will be set to 1 / (clock frequency * gyro's 131 LSB/°/sec).
 
-inline float fmap(float x, float in_min, float in_max, float out_min, float out_max) {
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
-inline int16_t clamp(int16_t x, int16_t min, int16_t max) {
-    return x < min ? min : x > max ? max : x;
-}
+inline float fclamp(float x, float min, float max) { return x < min ? min : x > max ? max : x; }
 
 void imu_init(){
     mpu6050 = mpu6050_init(MPU6050_I2C_PORT, MPU6050_ADDRESS);
@@ -40,24 +32,21 @@ void imu_init(){
 }
 
 void imu_task(Imu_data * data){
-    static float pitch;
-    static float pitch_accel;
-    static float accel_total;
-    static uint16_t velocity_raw;
-
     mpu6050_event(&mpu6050);
     mpu6050_vectorf_t *accel = mpu6050_get_accelerometer(&mpu6050);
     mpu6050_vectorf_t *gyro = mpu6050_get_gyroscope(&mpu6050);
 
-    pitch += gyro->x * gyro_multiplier;
-    accel_total = sqrt((accel->x*accel->x)+(accel->y*accel->y)+(accel->z*accel->z)); 
-    pitch_accel = asin((float)accel->y/accel_total) * RAD_TO_DEG;                                         
-    pitch = (pitch + pitch_accel) / 2;
-    // Clamp the velocity range
-    // velocity_raw = (uint16_t)fmap(accel_total - GRAVITY_CONSTANT, 0.0f, TAP_SENSITIVITY, 0.0f, 63.0f);
-    // uint16_t velocity_corrected = 64 + ringBufMax(&vel_ringbuf, velocity_raw);
-    // velocity_corrected = clamp(velocity_corrected, 64, 127);
-    // data->velocity = velocity_corrected;
-    data->velocity = ringBufMax(&vel_ringbuf, data->velocity);
-    data->deviation = (((pitch + REST_ANGLE) * 2.0 / 180.0f) - 1.0f) * BENDING_FACTOR;
+    // By 'pitch' here we mean the tilt angle, not the frequency of a note
+    float pitch = gyro->x * gyro_multiplier;
+    // Calculate the Euclidean norm of the vector (x, y, z)
+    float accel_total = sqrt((accel->x*accel->x)+(accel->y*accel->y)+(accel->z*accel->z));
+    float pitch_accel = asin((float)accel->y/accel_total) * RAD_TO_DEG;                                       
+    pitch = (pitch + pitch_accel) / 2.0f;
+    // Remove the gravitational pull from the calculations
+    accel_total -= GRAVITY_CONSTANT;
+    // Normalize and clamp outputs
+    accel_total = (fabs(accel_total) + TAP_SENSITIVITY) / TAP_SENSITIVITY -1.0f;
+    float deviation = (((pitch + 90.0f) * 2.0f / 180.0f) - 1.0f);
+    data->acceleration = fclamp(accel_total, 0.0f, 1.0f);
+    data->deviation = fclamp(deviation, -1.0f, 1.0f);
 }

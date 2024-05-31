@@ -18,7 +18,6 @@ add_subdirectory(lib/pico-mpr121/lib mpr121)
 add_subdirectory(lib/RP2040-pico_synth_ex pico_synth_ex_i2s)
 add_subdirectory(lib/RP2040-Button button)
 add_subdirectory(lib/rpi-pico-mpu6050 haw_mpu6050)
-add_subdirectory(lib/RingBufMax ringbufmax)
 add_subdirectory(lib/RP2040-Battery-Check battery_check)
 add_subdirectory(lib/RP2040-Rotary-Encoder)
 
@@ -33,7 +32,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/lib/rpi-pico-mpu6050/include/haw
         # ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi
-        ${CMAKE_CURRENT_LIST_DIR}/lib/RingBufMax
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -54,7 +52,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         pico_unique_id
         button
         haw_mpu6050
-        ringbufmax
         battery_check
         pico_rotary_encoder
         )

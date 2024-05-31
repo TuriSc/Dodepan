@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 typedef struct {            // Accelerometer/gyroscope data, with fallback.
-    uint16_t velocity;      // Velocity for Midi ranges between 64 and 127.
+    float acceleration;     // Also used to calculate velocity for Midi.
     float deviation;        // Bending amount.
 } Imu_data;
 

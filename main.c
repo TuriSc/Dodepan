@@ -69,12 +69,6 @@ uint8_t encoder_context;
 
 void blink();
 
-/* Math functions */
-
-inline int map(int x, int in_min, int in_max, int out_min, int out_max) {
-    return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
-}
-
 /* Note and audio functions */
 
 uint8_t get_note_by_id(uint8_t n) {
@@ -148,12 +142,15 @@ void set_instrument(uint8_t instr) {
 // }
 
 void trigger_note_on(uint8_t note) {
-    // uint16_t volume = map(imu_data.velocity, 64, 127, 128, 1024); // Audio volume ranges between 128 and 1024. // TODO
-    // TODO
-    // int8_t sustain = 32 + (32 * imu_data.velocity);
-    // set_parameter(EG_SUSTAIN_LEVEL, )
+    // Set the decay according to accelerometer data.
+    // The range of decay is 0-64, but here we're clamping it to 32-48.
+    int8_t decay = 32 + (16 * imu_data.acceleration);
+    set_parameter(EG_DECAY_TIME, decay);
+    // The range of velocity is 0-127, but here we're clamping it to 64-127
+    uint8_t velocity = 64 + (63 * imu_data.acceleration);
+    printf("velocity: %d\n", velocity);
+    // tudi_midi_write24(0, 0x90, note, velocity);
     note_on(note);
-    // tudi_midi_write24(0, 0x90, note, imu_data.velocity);
     blink();
 }
 
@@ -330,8 +327,8 @@ int main() {
     #endif
 
     // Falloff values in case IMU is disabled
-    imu_data.velocity = 127;
     imu_data.deviation = 0.0f;
+    imu_data.acceleration = 1.0f;
 
     mpr121_i2c_init();
 
