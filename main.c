@@ -194,7 +194,7 @@ int64_t power_on_complete() {
     return 0;
 }
 
-void blink() { // LED blinks for 0.1 seconds after a note is played
+void blink() { // LED blinks for 0.1 seconds when a note is played
     gpio_put(LED_PIN, 1);
     if (blink_alarm_id) cancel_alarm(blink_alarm_id);
     blink_alarm_id = add_alarm_in_us(100000, blink_complete, NULL, true);
@@ -205,7 +205,7 @@ void encoder_onchange(rotary_encoder_t *encoder) {
     long int position = encoder->position / 4; // Adjust the encoder sensitivity here
     int8_t direction = 0;
     if(last_position != position) {
-    direction = (last_position < position ? 1 : -1);
+        direction = (last_position < position ? 1 : -1);
     }
     last_position = position;
 
@@ -288,8 +288,8 @@ void bi_decl_all() {
 
 int main() {
     // Set the system clock.
-    // If you run it at the default speed, expect an offset
-    // with the output frequencies.
+    // You can run it at the default speed, but expect
+    // an offset with the output frequencies.
     set_sys_clock_khz(FCLKSYS / 1000, true);
 
     stdio_init_all();
@@ -364,6 +364,5 @@ int main() {
         #endif
         // tud_task(); // tinyusb device task
         demuxer_task();
-        sleep_ms(1); // Things tend to break without this line
     }
 }
