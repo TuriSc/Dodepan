@@ -44,15 +44,15 @@
 // indication of which key and scale are selected.
 #define DEMUX_EN                    16
 #define DEMUX_EN_DESCRIPTION        "Demux EN"
-#define DEMUX_SIG                   13
+#define DEMUX_SIG                   14
 #define DEMUX_SIG_DESCRIPTION       "Demux SIG"
-#define DEMUX_S0                    14
+#define DEMUX_S0                    13
 #define DEMUX_S0_DESCRIPTION        "Demux S0"
-#define DEMUX_S1                    15
+#define DEMUX_S1                    12
 #define DEMUX_S1_DESCRIPTION        "Demux S1"
 #define DEMUX_S2                    11
 #define DEMUX_S2_DESCRIPTION        "Demux S2"
-#define DEMUX_S3                    12
+#define DEMUX_S3                    10
 #define DEMUX_S3_DESCRIPTION        "Demux S3"
 
 /* MPR121 */

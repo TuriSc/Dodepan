@@ -148,7 +148,6 @@ void trigger_note_on(uint8_t note) {
     set_parameter(EG_DECAY_TIME, decay);
     // The range of velocity is 0-127, but here we're clamping it to 64-127
     uint8_t velocity = 64 + (63 * imu_data.acceleration);
-    printf("velocity: %d\n", velocity);
     // tudi_midi_write24(0, 0x90, note, velocity);
     note_on(note);
     blink();
