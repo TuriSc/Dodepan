@@ -15,7 +15,7 @@ void mpr121_i2c_init(){
     gpio_pull_up(MPR121_SDA_PIN);
     gpio_pull_up(MPR121_SCL_PIN);
 
-    mpr121_init(MPR121_I2C_PORT, MPR121_ADDR, &mpr121);
+    mpr121_init(MPR121_I2C_PORT, MPR121_ADDRESS, &mpr121);
     mpr121_set_thresholds(MPR121_TOUCH_THRESHOLD,
                           MPR121_RELEASE_THRESHOLD, &mpr121);
     

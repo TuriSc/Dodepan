@@ -1,7 +1,7 @@
 /* Dodepan
  * Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out.
  * By Turi Scandurra – https://turiscandurra.com/circuits
- * v2.1.1b - 2024.05.27
+ * v2.1.2b - 2024.06.11
  */
 
 #include <stdio.h>
@@ -19,6 +19,7 @@
 #include "battery-check.h"
 #include "imu.h"
 #include "touch.h"
+#include "display/display.h"
 
 /* Audio setup */
 #if USE_AUDIO_I2S
@@ -49,6 +50,10 @@ uint8_t instrument;
 struct audio_buffer_pool *ap;
 
 Imu_data imu_data;
+
+#ifdef USE_DISPLAY
+ssd1306_t display;
+#endif
 
 // The following two arrays map key indices to notes and alterations
 static uint8_t key_to_note_map[12] =    {0,0,1,1,2,3,3,4,4,5,5,6};
@@ -264,9 +269,15 @@ void bi_decl_all() {
     bi_decl(bi_1pin_with_name(ENCODER_DT_PIN, ENCODER_DT_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_CLK_PIN, ENCODER_CLK_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_SWITCH_PIN, ENCODER_SWITCH_DESCRIPTION));
-    #ifdef USE_GYRO
-    bi_decl(bi_1pin_with_name(MPU6050_SDA_PIN, MPU6050_SDA_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(MPU6050_SCL_PIN, MPU6050_SCL_DESCRIPTION));
+    #if defined USE_DISPLAY && defined USE_GYRO
+    bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_MPU6050_SDA_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_MPU6050_SCL_DESCRIPTION));
+    #elif defined USE_DISPLAY
+    bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_SDA_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_SCL_DESCRIPTION));
+    #elif defined USE_GYRO
+    bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, MPU6050_SDA_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, MPU6050_SCL_DESCRIPTION));
     #endif
     #if USE_AUDIO_PWM
     bi_decl(bi_2pins_with_names(PWM_AUDIO_PIN_RIGHT, PWM_AUDIO_RIGHT_DESCRIPTION,
@@ -307,21 +318,6 @@ int main() {
     gpio_init(LOW_BATT_LED_PIN);
     gpio_set_dir(LOW_BATT_LED_PIN, GPIO_OUT);
 
-    #ifdef USE_GYRO
-    gpio_init(MPU6050_SDA_PIN);
-    gpio_init(MPU6050_SCL_PIN);
-    gpio_set_function(MPU6050_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(MPU6050_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(MPU6050_SDA_PIN);
-    gpio_pull_up(MPU6050_SCL_PIN);
-
-    imu_init(); // MPU6050
-    #endif
-
-    // Falloff values in case IMU is disabled
-    imu_data.deviation = 0.0f;
-    imu_data.acceleration = 1.0f;
-
     mpr121_i2c_init();
 
     adc_init();
@@ -329,6 +325,30 @@ int main() {
 
     rotary_encoder_t *encoder = create_encoder(ENCODER_DT_PIN, ENCODER_CLK_PIN, encoder_onchange);
     button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
+
+    #if defined USE_DISPLAY || defined USE_GYRO
+    gpio_init(SSD1306_SDA_PIN);
+    gpio_init(SSD1306_SCL_PIN);
+    gpio_set_function(SSD1306_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SSD1306_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(SSD1306_SDA_PIN);
+    gpio_pull_up(SSD1306_SCL_PIN);
+    #endif
+
+    /* Display */
+    #ifdef USE_DISPLAY
+    i2c_init(SSD1306_I2C_PORT, SSD1306_I2C_FREQ);
+    display_init(&display);
+    display_update(&display);
+    #endif
+
+    #ifdef USE_GYRO
+    imu_init(); // MPU6050
+    #endif
+
+    // Falloff values in case the IMU is disabled
+    imu_data.deviation = 0.0f;
+    imu_data.acceleration = 1.0f;
 
     // board_init(); // Midi
     // tusb_init(); // tinyusb

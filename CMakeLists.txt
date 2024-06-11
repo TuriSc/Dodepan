@@ -25,12 +25,15 @@ target_sources(${PROJECT_NAME} PRIVATE
         # ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi/usb_descriptors.c
         ${CMAKE_CURRENT_LIST_DIR}/imu.c
         ${CMAKE_CURRENT_LIST_DIR}/touch.c
+        ${CMAKE_CURRENT_LIST_DIR}/display/display.c
+        ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306/ssd1306.c
         )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}
         ${CMAKE_CURRENT_LIST_DIR}/lib/rpi-pico-mpu6050/include/haw
         # ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi
+        ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306
         )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
