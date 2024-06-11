@@ -64,7 +64,7 @@
 #define MPR121_SCL_DESCRIPTION      "MPR121 SCL"
 
 #define MPR121_ADDRESS              0x5A
-#define MPR121_I2C_FREQ             100 * 1000 // 100kHz
+#define MPR121_I2C_FREQ             400 * 1000 // 100kHz
 
 #define MPR121_TOUCH_THRESHOLD      32
 #define MPR121_RELEASE_THRESHOLD    6

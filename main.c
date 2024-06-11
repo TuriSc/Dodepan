@@ -20,6 +20,7 @@
 #include "imu.h"
 #include "touch.h"
 #include "display/display.h"
+#include "state.h"
 
 /* Audio setup */
 #if USE_AUDIO_I2S
@@ -36,16 +37,7 @@
 #endif
 
 /* Globals */
-typedef struct {
-    uint8_t key;
-    uint8_t scale;
-    uint8_t extended_scale[12];     // A copy of the scale array, padded with
-                                    // repeated notes shifted up in octaves,
-                                    // so that we always end up with 12 notes.
-} Tuning;
-Tuning tuning;
-
-uint8_t instrument;
+state_t state;
 
 struct audio_buffer_pool *ap;
 
@@ -55,28 +47,18 @@ Imu_data imu_data;
 ssd1306_t display;
 #endif
 
-// The following two arrays map key indices to notes and alterations
-static uint8_t key_to_note_map[12] =    {0,0,1,1,2,3,3,4,4,5,5,6};
-static bool key_to_alteration_map[12] = {0,1,0,1,0,0,1,0,1,0,1,0};
-
 static alarm_id_t blink_alarm_id;
 static alarm_id_t power_on_alarm_id;
 
 uint8_t audio_pin_slice;
 uint8_t num_scales = sizeof(scales)/sizeof(scales[0]);
 
-// The encoder affects different parameters according to its current context
-uint8_t encoder_context;
-#define CTX_KEY 0
-#define CTX_SCALE 1
-#define CTX_INSTRUMENT 2
-
 void blink();
 
 /* Note and audio functions */
 
 uint8_t get_note_by_id(uint8_t n) {
-    return tuning.key + tuning.extended_scale[n];
+    return state.key + state.extended_scale[n];
 }
 
 uint8_t get_scale_size(uint8_t s) {
@@ -87,21 +69,24 @@ uint8_t get_scale_size(uint8_t s) {
 }
 
 void update_key() {
-    uint8_t key = tuning.key % 12;
-    //set_led(KEY, (9 + key_to_note_map[key])); // LEDs on C9 to C15
-    //set_led(ALTERATION, (key_to_alteration_map[key] ? 8 : -1)); // LED on C8, off if not an alteration
+    uint8_t tonic = state.key % 12;
+    state.tonic = tonic;
+    state.octave = state.key / 12;  // C3 is in octave 5 in this system because
+                                    // octave -1 is the first element
+    // Map key indices to alterations
+    static bool key_to_alteration_map[12] = {0,1,0,1,0,0,1,0,1,0,1,0};
+    state.is_alteration = (key_to_alteration_map[tonic] ? 1 : 0);
 }
 
 void update_scale() {
-    uint8_t scale_size = get_scale_size(tuning.scale);
+    uint8_t scale_size = get_scale_size(state.scale);
     uint8_t j = 0;
     uint8_t octave_shift = 0;
     for (uint8_t i=0; i<12; i++) {
-        tuning.extended_scale[i] = (scales[tuning.scale][j] + octave_shift);
+        state.extended_scale[i] = (scales[state.scale][j] + octave_shift);
         j++;
         if (j >= scale_size) {j=0; octave_shift+=12;}
     }
-    //set_led(SCALE, tuning.scale % 8);
 }
 
 void set_instrument(uint8_t instr) {
@@ -137,7 +122,7 @@ void set_instrument(uint8_t instr) {
             control_message(PRESET_9);
         break;
     }
-    instrument = instr;
+    state.instrument = instr;
 }
 
 // static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
@@ -176,7 +161,7 @@ void bending(float deviation) {
 
     // Prepare Midi message
     static uint8_t throttle;
-    if(throttle++ % 10 != 0) return; // Limit the message rate
+    if(throttle++ % 10 != 0) return; // Further limit the message rate
     // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
     // with 8192 (0x2000) being the center value.
     unsigned int pitchval = (deviation+1.f)*8192;
@@ -213,42 +198,44 @@ void encoder_onchange(rotary_encoder_t *encoder) {
     last_position = position;
 
     if (direction == 1) {
-        switch (encoder_context) {
+        switch (state.context) {
             case CTX_KEY:
-                // 100 (E7) is the highest root note that can be set
-                if(tuning.key < 99) tuning.key++;
+                // D#7 is the highest root note that can be set
+                if(state.key < 99) state.key++;
                 update_key();
             break;
             case CTX_SCALE:
-                if(tuning.scale < num_scales - 1) tuning.scale++;
+                if(state.scale < num_scales - 1) state.scale++;
                 update_scale();
             break;
             case CTX_INSTRUMENT:
-                if(instrument < 9) set_instrument(instrument + 1);
+                if(state.instrument < 9) set_instrument(state.instrument + 1);
             break;
         }
     } else if (direction == -1) {
-        switch (encoder_context) {
+        switch (state.context) {
             case CTX_KEY:
-                if(tuning.key > 0) tuning.key--;
+                if(state.key > 0) state.key--;
                 update_key();
             break;
             case CTX_SCALE:
-                if(tuning.scale > 0) tuning.scale--;
+                if(state.scale > 0) state.scale--;
                 update_scale();
             break;
             case CTX_INSTRUMENT:
-                if(instrument > 0) set_instrument(instrument - 1);
+                if(state.instrument > 0) set_instrument(state.instrument - 1);
             break;
         }
     }
+    display_draw(&display, &state);
 }
 
 void button_onchange(button_t *button_p) {
     button_t *button = (button_t*)button_p;
     if(!button->state) { // Button pressed
-        encoder_context++;
-        if (encoder_context > 3) { encoder_context = CTX_KEY; }
+        state.context++;
+        if (state.context == CTX_NUM) { state.context = CTX_KEY; }
+        display_draw(&display, &state);
     }
 }
 
@@ -310,6 +297,11 @@ int main() {
         sound_i2s_playback_start();
         add_repeating_timer_ms(10, i2s_timer_callback, NULL, &i2s_timer);
     #endif
+    
+    state.context = CTX_KEY;
+    state.key = 48; // C3
+    update_key();
+    update_scale();
     set_instrument(0);
 
     gpio_init(LED_PIN);
@@ -339,7 +331,7 @@ int main() {
     #ifdef USE_DISPLAY
     i2c_init(SSD1306_I2C_PORT, SSD1306_I2C_FREQ);
     display_init(&display);
-    display_update(&display);
+    display_draw(&display, &state);
     #endif
 
     #ifdef USE_GYRO
@@ -356,22 +348,21 @@ int main() {
     // Non-time-critical routine, run by timer
     battery_check_init(5000, NULL, battery_low_callback);
 
-    encoder_context = CTX_KEY;
-    tuning.key = 48; // C3
-    update_key();
-    update_scale();
-
     // Use the onboard LED as a power-on indicator
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
     power_on_alarm_id = add_alarm_in_ms(500, power_on_complete, NULL, true);
     
+    static uint8_t throttle;
     while (1) { // Main loop
         mpr121_task();
         #ifdef USE_GYRO
-        imu_task(&imu_data);
-        bending(imu_data.deviation);
+        if(throttle++ % 10 == 0) { // Limit the call rate
+            imu_task(&imu_data);
+            bending(imu_data.deviation);
+        } 
+        
         #endif
         // tud_task(); // tinyusb device task
     }
