@@ -24,7 +24,6 @@ add_subdirectory(lib/RP2040-Rotary-Encoder)
 target_sources(${PROJECT_NAME} PRIVATE
         # ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi/usb_descriptors.c
         ${CMAKE_CURRENT_LIST_DIR}/imu.c
-        ${CMAKE_CURRENT_LIST_DIR}/demuxer.c
         ${CMAKE_CURRENT_LIST_DIR}/touch.c
         )
 

@@ -18,7 +18,6 @@
 #include "scales.h"
 #include "battery-check.h"
 #include "imu.h"
-#include "demuxer.h"
 #include "touch.h"
 
 /* Audio setup */
@@ -84,8 +83,8 @@ uint8_t get_scale_size(uint8_t s) {
 
 void update_key() {
     uint8_t key = tuning.key % 12;
-    set_led(KEY, (9 + key_to_note_map[key])); // LEDs on C9 to C15
-    set_led(ALTERATION, (key_to_alteration_map[key] ? 8 : -1)); // LED on C8, off if not an alteration
+    //set_led(KEY, (9 + key_to_note_map[key])); // LEDs on C9 to C15
+    //set_led(ALTERATION, (key_to_alteration_map[key] ? 8 : -1)); // LED on C8, off if not an alteration
 }
 
 void update_scale() {
@@ -97,7 +96,7 @@ void update_scale() {
         j++;
         if (j >= scale_size) {j=0; octave_shift+=12;}
     }
-    set_led(SCALE, tuning.scale % 8);
+    //set_led(SCALE, tuning.scale % 8);
 }
 
 void set_instrument(uint8_t instr) {
@@ -262,12 +261,6 @@ void bi_decl_all() {
     bi_decl(bi_1pin_with_name(LED_PIN, LED_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SDA_PIN, MPR121_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SCL_PIN, MPR121_SCL_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(DEMUX_EN, DEMUX_EN_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(DEMUX_SIG, DEMUX_SIG_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(DEMUX_S0, DEMUX_S0_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(DEMUX_S1, DEMUX_S1_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(DEMUX_S2, DEMUX_S2_DESCRIPTION));
-    bi_decl(bi_1pin_with_name(DEMUX_S3, DEMUX_S3_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_DT_PIN, ENCODER_DT_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_CLK_PIN, ENCODER_CLK_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_SWITCH_PIN, ENCODER_SWITCH_DESCRIPTION));
@@ -334,7 +327,6 @@ int main() {
     adc_init();
     adc_gpio_init(PIN_BATT_LVL);
 
-    demuxer_init(DEMUX_EN, DEMUX_SIG, DEMUX_S0, DEMUX_S1, DEMUX_S2, DEMUX_S3);
     rotary_encoder_t *encoder = create_encoder(ENCODER_DT_PIN, ENCODER_CLK_PIN, encoder_onchange);
     button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
 
@@ -362,6 +354,5 @@ int main() {
         bending(imu_data.deviation);
         #endif
         // tud_task(); // tinyusb device task
-        demuxer_task();
     }
 }

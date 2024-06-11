@@ -39,22 +39,6 @@
 #define GRAVITY_CONSTANT            9.80665f // Please do not modify the gravity of the earth!
 #define RAD_TO_DEG                  57.295779513f // = 1 / (PI / 180).
 
-/* 74HC4067 Multiplexer/Demultiplexer */
-// The demultiplexer gives you a visual
-// indication of which key and scale are selected.
-#define DEMUX_EN                    16
-#define DEMUX_EN_DESCRIPTION        "Demux EN"
-#define DEMUX_SIG                   14
-#define DEMUX_SIG_DESCRIPTION       "Demux SIG"
-#define DEMUX_S0                    13
-#define DEMUX_S0_DESCRIPTION        "Demux S0"
-#define DEMUX_S1                    12
-#define DEMUX_S1_DESCRIPTION        "Demux S1"
-#define DEMUX_S2                    11
-#define DEMUX_S2_DESCRIPTION        "Demux S2"
-#define DEMUX_S3                    10
-#define DEMUX_S3_DESCRIPTION        "Demux S3"
-
 /* MPR121 */
 #define MPR121_I2C_PORT             i2c0
 #define MPR121_SDA_PIN              4 // GP4, i2c0
