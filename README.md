@@ -4,6 +4,6 @@ Under development. Please use the [older repository](https://github.com/TuriSc/D
 
 This is the firmware for a new iteration of the Dodepan musical instrument.
 The hardware features:
-- a larger flash chip, allowing noise-free 16bit samples to be used
 - an I2S DAC rather than PWM for improved audio quality
-- buttons to select key and scale rather than potentiometers
+- an SSD1306 OLED display
+- a rotary encoder to select key, scale and instrument preset
