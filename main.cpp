@@ -26,11 +26,11 @@
 #if USE_AUDIO_I2S
     #include "sound_i2s.h"
     static const struct sound_i2s_config sound_config = {
-        .pin_sda         = I2S_DATA_PIN,
+        .pio_num         = 0, // 0 for pio0, 1 for pio1
         .pin_scl         = I2S_CLOCK_PIN_BASE,
+        .pin_sda         = I2S_DATA_PIN,
         .pin_ws          = I2S_CLOCK_PIN_BASE + 1,
         .sample_rate     = SOUND_OUTPUT_FREQUENCY,
-        .pio_num         = 0, // 0 for pio0, 1 for pio1
     };
 
     repeating_timer_t i2s_timer;
@@ -172,12 +172,12 @@ void bending(float deviation) {
 
 /* I/O functions */
 
-int64_t blink_complete() {
+int64_t blink_complete(alarm_id_t, void *) {
     gpio_put(LED_PIN, 0);
     return 0;
 }
 
-int64_t power_on_complete() {
+int64_t power_on_complete(alarm_id_t, void *) {
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
     return 0;
 }
@@ -239,7 +239,7 @@ void button_onchange(button_t *button_p) {
     }
 }
 
-void battery_low_callback(uint16_t battery_mv) {
+void battery_low() {
     // Low battery detected
     gpio_put(LOW_BATT_LED_PIN, 1);
     battery_check_stop(); // Stop the timer
@@ -346,7 +346,7 @@ int main() {
     // tusb_init(); // tinyusb
 
     // Non-time-critical routine, run by timer
-    battery_check_init(5000, NULL, battery_low_callback);
+    battery_check_init(5000, NULL, (void*)battery_low);
 
     // Use the onboard LED as a power-on indicator
     gpio_init(PICO_DEFAULT_LED_PIN);
