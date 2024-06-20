@@ -52,9 +52,9 @@
 #define GRAVITY_CONSTANT            9.80665f // Please do not modify the gravity of the earth!
 #define RAD_TO_DEG                  57.295779513f // = 1 / (PI / 180)
 
-#define SEPARATOR " + "
-#define SSD1306_MPU6050_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION SEPARATOR MPU6050_SDA_DESCRIPTION
-#define SSD1306_MPU6050_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION SEPARATOR MPU6050_SCL_DESCRIPTION
+#define PLUS " + "
+#define SSD1306_MPU6050_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS MPU6050_SDA_DESCRIPTION
+#define SSD1306_MPU6050_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION PLUS MPU6050_SCL_DESCRIPTION
 
 /* MPR121 */
 #define MPR121_I2C_PORT             i2c0
@@ -69,22 +69,19 @@
 #define MPR121_TOUCH_THRESHOLD      32
 #define MPR121_RELEASE_THRESHOLD    6
 
-/* Audio */
+/* Audio and synth */
+
+#define PRA32_U_MIDI_CH                       0  // 0-based
+
+#define AUDIO_BUFFER_LENGTH         1024
 #define SOUND_OUTPUT_FREQUENCY      22050
 
-#if USE_AUDIO_PWM
-    #define PWM_AUDIO_PIN_RIGHT     1
-    #define PWM_AUDIO_RIGHT_DESCRIPTION "Right PWM audio output"
-    #define PWM_AUDIO_PIN_LEFT      0
-    #define PWM_AUDIO_LEFT_DESCRIPTION  "Left PWM audio output"
-#elif USE_AUDIO_I2S
-    #include "sound_i2s.h"
-    #define I2S_DATA_PIN             2 // -> I2S DIN
-    #define I2S_DATA_DESCRIPTION     "I2S DIN"
-    #define I2S_CLOCK_PIN_BASE       0 // -> I2S BCK
-    #define I2S_BCK_DESCRIPTION      "I2S BCK"
-    #define I2S_LRCK_DESCRIPTION     "I2S LRCK" // Must be BCK+1
-    // The third required connection is GPIO 1 -> I2S LRCK (BCK+1)
-#endif
+#define I2S_PIO_NUM                 0 // 0 for pio0, 1 for pio1
+#define I2S_DATA_PIN                2 // -> I2S DIN
+#define I2S_DATA_DESCRIPTION        "I2S DIN"
+#define I2S_CLOCK_PIN_BASE          0 // -> I2S BCK
+#define I2S_BCK_DESCRIPTION         "I2S BCK"
+#define I2S_LRCK_DESCRIPTION        "I2S LRCK" // Must be BCK+1
+// The third required connection is GPIO 1 -> I2S LRCK (BCK+1)
 
 #endif /* CONFIG_H_ */

@@ -13,9 +13,9 @@
 [submodule "lib/RP2040-Rotary-Encoder"]
 	path = lib/RP2040-Rotary-Encoder
 	url = https://github.com/TuriSc/RP2040-Rotary-Encoder
-[submodule "lib/RP2040-pico_synth_ex"]
-	path = lib/RP2040-pico_synth_ex
-	url = https://github.com/TuriSc/RP2040-pico_synth_ex
 [submodule "lib/pico-ssd1306"]
 	path = lib/pico-ssd1306
 	url = https://github.com/daschr/pico-ssd1306
+[submodule "lib/digital-synth-pra32-u"]
+	path = lib/digital-synth-pra32-u
+	url = https://github.com/risgk/digital-synth-pra32-u

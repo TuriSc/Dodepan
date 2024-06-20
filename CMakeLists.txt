@@ -14,11 +14,11 @@ add_executable(${PROJECT_NAME}
 )
 
 add_subdirectory(lib/pico-mpr121/lib mpr121)
-add_subdirectory(lib/RP2040-pico_synth_ex pico_synth_ex_i2s)
 add_subdirectory(lib/RP2040-Button button)
 add_subdirectory(lib/rpi-pico-mpu6050 haw_mpu6050)
 add_subdirectory(lib/RP2040-Battery-Check battery_check)
 add_subdirectory(lib/RP2040-Rotary-Encoder)
+add_subdirectory(lib/sound_i2s)
 
 target_sources(${PROJECT_NAME} PRIVATE
         # ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi/usb_descriptors.c
@@ -33,12 +33,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}/lib/rpi-pico-mpu6050/include/haw
         # ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi
         ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306
-        )
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-        # Define only one audio output
-        # USE_AUDIO_PWM=1
-        USE_AUDIO_I2S=1
+        ${CMAKE_CURRENT_LIST_DIR}/lib/digital-synth-pra32-u/Digital-Synth-PRA32-U
         )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -47,7 +42,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_dma
         hardware_adc
         pico-mpr121
-        pico_synth_ex_i2s
+        pico_multicore
+        sound_i2s_16bits
         # tinyusb_device
         # tinyusb_board
         pico_unique_id

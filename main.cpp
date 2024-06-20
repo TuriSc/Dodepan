@@ -7,10 +7,17 @@
 #include <stdio.h>
 #include "config.h"         // Most configurable options are here
 #include "pico/stdlib.h"
+// Arduino types added for compatibility
+typedef bool boolean;
+typedef uint8_t byte;
 #include "hardware/gpio.h"
 #include "hardware/adc.h"
 #include "pico/binary_info.h"
-#include "pico_synth_ex.h"  // https://github.com/TuriSc/RP2040-pico_synth_ex
+#include "pico/multicore.h"
+#include "sound_i2s.h"
+#include "pra32-u-common.h" // https://github.com/risgk/digital-synth-pra32-u
+#include "pra32-u-synth.h"  // PRA32-U version 2.3.1
+#include "instrument_preset.h"
 #include "encoder.h"        // https://github.com/TuriSc/RP2040-Rotary-Encoder
 #include "button.h"         // https://github.com/TuriSc/RP2040-Button
 // #include "bsp/board.h"      // For Midi
@@ -22,28 +29,25 @@
 #include "display/display.h"
 #include "state.h"
 
-/* Audio setup */
-#if USE_AUDIO_I2S
-    #include "sound_i2s.h"
+/* Audio */
     static const struct sound_i2s_config sound_config = {
-        .pio_num         = 0, // 0 for pio0, 1 for pio1
+        .pio_num         = I2S_PIO_NUM,
         .pin_scl         = I2S_CLOCK_PIN_BASE,
         .pin_sda         = I2S_DATA_PIN,
         .pin_ws          = I2S_CLOCK_PIN_BASE + 1,
         .sample_rate     = SOUND_OUTPUT_FREQUENCY,
     };
 
-    repeating_timer_t i2s_timer;
-#endif
-
 /* Globals */
+PRA32_U_Synth g_synth;
+
 state_t state;
 
 struct audio_buffer_pool *ap;
 
 Imu_data imu_data;
 
-#ifdef USE_DISPLAY
+#if defined (USE_DISPLAY)
 ssd1306_t display;
 #endif
 
@@ -54,6 +58,10 @@ uint8_t audio_pin_slice;
 uint8_t num_scales = sizeof(scales)/sizeof(scales[0]);
 
 void blink();
+
+void core1_main() {
+    while(true) { g_synth.secondary_core_process(); }
+}
 
 /* Note and audio functions */
 
@@ -91,35 +99,13 @@ void update_scale() {
 
 void set_instrument(uint8_t instr) {
     switch (instr) {
-        case 0:
-            load_preset((Preset_t) { 0, 1, 12, 16, 32, 72, 5, 19, 38, 14, 2, 2}); // Default
+        case 0: // Load custom Dodepan preset
+            for (uint32_t i = 0; i < sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]); ++i) {
+                g_synth.control_change(dodepan_program_parameters[i], dodepan_program[i]);
+            }
         break;
-        case 1:
-            control_message(PRESET_0);
-        break;
-        case 2:
-            control_message(PRESET_1);
-        break;
-        case 3:
-            control_message(PRESET_2);
-        break;
-        case 4:
-            control_message(PRESET_3);
-        break;
-        case 5:
-            control_message(PRESET_5);
-        break;
-        case 6:
-            control_message(PRESET_6);
-        break;
-        case 7:
-            control_message(PRESET_7);
-        break;
-        case 8:
-            control_message(PRESET_8);
-        break;
-        case 9:
-            control_message(PRESET_9);
+        default: // Load PRA32-U presets
+            g_synth.program_change(instr - 1); 
         break;
     }
     state.instrument = instr;
@@ -134,16 +120,16 @@ void trigger_note_on(uint8_t note) {
     // Set the decay according to accelerometer data.
     // The range of decay is 0-64, but here we're clamping it to 32-48.
     int8_t decay = 32 + (16 * imu_data.acceleration);
-    set_parameter(EG_DECAY_TIME, decay);
+    // set_parameter(EG_DECAY_TIME, decay); // TODO
     // The range of velocity is 0-127, but here we're clamping it to 64-127
     uint8_t velocity = 64 + (63 * imu_data.acceleration);
     // tudi_midi_write24(0, 0x90, note, velocity);
-    note_on(note);
+    g_synth.note_on(note, velocity);
     blink();
 }
 
 void trigger_note_off(uint8_t note) {
-    note_off(note);
+    g_synth.note_off(note);
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
@@ -152,12 +138,13 @@ void bending(float deviation) {
     // The range of the deviation parameter is between -1 and 1 inclusive.
     // Parameters have a minimum, a maximum, and a center value, for example
     // FILTER_CUTOFF goes from 0 to 120, with 60 being the center value.
-    int8_t cutoff = 60 + (60 * deviation);
-    set_parameter(FILTER_CUTOFF, cutoff);
+    // int8_t cutoff = 60 + (60 * deviation);
+    // set_parameter(FILTER_CUTOFF, cutoff);
 
     // For pitch bending use this instead:
     // int8_t pitch = 16 + (32 * deviation);
     // set_parameter(OSC_2_FINE_PITCH, pitch);
+    // g_synth.pitch_bend((bend + 8192) & 0x7F, (bend + 8192) >> 7);
 
     // Prepare Midi message
     static uint8_t throttle;
@@ -196,11 +183,13 @@ void encoder_onchange(rotary_encoder_t *encoder) {
         direction = (last_position < position ? 1 : -1);
     }
     last_position = position;
+    uint8_t control_number;
+    uint8_t num_parameters = sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]);
 
     if (direction == 1) {
         switch (state.context) {
             case CTX_KEY:
-                // D#7 is the highest root note that can be set
+                // D#7 is the highest note that can be set as root note
                 if(state.key < 99) state.key++;
                 update_key();
             break;
@@ -209,7 +198,17 @@ void encoder_onchange(rotary_encoder_t *encoder) {
                 update_scale();
             break;
             case CTX_INSTRUMENT:
-                if(state.instrument < 9) set_instrument(state.instrument + 1);
+                if(state.instrument < PRESET_PROGRAM_NUMBER_MAX + 1) set_instrument(state.instrument + 1);
+            break;
+            case CTX_PARAMETER:
+                if(state.parameter < num_parameters - 1) state.parameter++;
+                control_number = dodepan_program_parameters[state.parameter];
+                state.argument = g_synth.current_controller_value(control_number);
+            break;
+            case CTX_ARGUMENT:
+                if(state.argument < 128) state.argument++;
+                control_number = dodepan_program_parameters[state.parameter];
+                g_synth.control_change(control_number, state.argument);
             break;
         }
     } else if (direction == -1) {
@@ -225,6 +224,16 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             case CTX_INSTRUMENT:
                 if(state.instrument > 0) set_instrument(state.instrument - 1);
             break;
+            case CTX_PARAMETER:
+                if(state.parameter > 0) state.parameter--;
+                control_number = dodepan_program_parameters[state.parameter];
+                state.argument = g_synth.current_controller_value(control_number);
+            break;
+            case CTX_ARGUMENT:
+                if(state.argument > 0) state.argument--;
+                control_number = dodepan_program_parameters[state.parameter];
+                g_synth.control_change(control_number, state.argument);
+            break;
         }
     }
     display_draw(&display, &state);
@@ -232,16 +241,48 @@ void encoder_onchange(rotary_encoder_t *encoder) {
 
 void button_onchange(button_t *button_p) {
     button_t *button = (button_t*)button_p;
+    static uint64_t pressed_time;
+    uint8_t num_parameters = sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]);
     if(!button->state) { // Button pressed
-        state.context++;
-        if (state.context == CTX_NUM) { state.context = CTX_KEY; }
+        pressed_time = time_us_64();
+        switch(state.context){
+            case CTX_KEY:
+            case CTX_SCALE:
+            case CTX_INSTRUMENT:
+                state.context++;
+                if (state.context == CTX_INSTRUMENT + 1) { state.context = CTX_KEY; }
+            break;
+            case CTX_PARAMETER:
+                state.context = CTX_ARGUMENT;
+            break;
+            case CTX_ARGUMENT:
+                state.context = CTX_PARAMETER;
+            break;
+        }
         display_draw(&display, &state);
+    } else { // Button released
+        uint64_t released_time = time_us_64();
+        if(released_time - pressed_time > 2000*1000) { // Held for more than 2 seconds
+            switch(state.context){
+                case CTX_KEY:
+                case CTX_SCALE:
+                case CTX_INSTRUMENT:
+                    state.context = CTX_PARAMETER;
+                break;
+                case CTX_PARAMETER:
+                case CTX_ARGUMENT:
+                    state.context = CTX_KEY;
+                break;
+            }
+
+            display_draw(&display, &state);
+        }
     }
 }
 
-void battery_low() {
+void battery_low_detected() { // TODO, new battery level display
     // Low battery detected
-    gpio_put(LOW_BATT_LED_PIN, 1);
+    // gpio_put(LOW_BATT_LED_PIN, 1);
     battery_check_stop(); // Stop the timer
 }
 
@@ -256,87 +297,87 @@ void bi_decl_all() {
     bi_decl(bi_1pin_with_name(ENCODER_DT_PIN, ENCODER_DT_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_CLK_PIN, ENCODER_CLK_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_SWITCH_PIN, ENCODER_SWITCH_DESCRIPTION));
-    #if defined USE_DISPLAY && defined USE_GYRO
+#if defined USE_DISPLAY && defined USE_GYRO
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_MPU6050_SCL_DESCRIPTION));
-    #elif defined USE_DISPLAY
+#elif defined USE_DISPLAY
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_SCL_DESCRIPTION));
-    #elif defined USE_GYRO
+#elif defined USE_GYRO
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, MPU6050_SCL_DESCRIPTION));
-    #endif
-    #if USE_AUDIO_PWM
-    bi_decl(bi_2pins_with_names(PWM_AUDIO_PIN_RIGHT, PWM_AUDIO_RIGHT_DESCRIPTION,
-    PWM_AUDIO_PIN_LEFT, PWM_AUDIO_LEFT_DESCRIPTION));
-    #elif USE_AUDIO_I2S
+#endif
     bi_decl(bi_3pins_with_names(I2S_DATA_PIN, I2S_DATA_DESCRIPTION,
     I2S_CLOCK_PIN_BASE, I2S_BCK_DESCRIPTION,
     I2S_CLOCK_PIN_BASE+1, I2S_LRCK_DESCRIPTION));
-    #endif
+}
+
+static inline void i2s_audio_task() {
+    static int16_t *last_buffer;
+    int16_t *buffer = sound_i2s_get_next_buffer();
+    if (buffer != last_buffer) {
+        last_buffer = buffer;
+        int16_t right_buffer; // Necessary quirk for compatibility with
+                              // the original PRA32-U code
+        for (int i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
+            uint16_t level = g_synth.process(right_buffer);
+            // level = (int64_t)level * (int32_t)volume >> 16; // TODO, use main volume
+            // Copy to I2S buffer
+            *buffer++ = level;
+            *buffer++ = level;
+        }
+    }
 }
 
 int main() {
-    // Set the system clock.
-    // You can run it at the default speed, but expect
-    // an offset with the output frequencies.
-    set_sys_clock_khz(FCLKSYS / 1000, true);
-
     stdio_init_all();
 
     bi_decl_all();
 
-    // Start the synth.
-    #if USE_AUDIO_PWM
-        // Pass the two output GPIOs as arguments.
-        // Left channel must be active.
-        // For a mono setup, the right channel can be disabled by passing -1.
-        PWMA_init(PWM_AUDIO_PIN_RIGHT, PWM_AUDIO_PIN_LEFT);
-    #elif USE_AUDIO_I2S
-        sound_i2s_init(&sound_config);
-        sound_i2s_playback_start();
-        add_repeating_timer_ms(10, i2s_timer_callback, NULL, &i2s_timer);
-    #endif
-    
+    // Start the audio engine.
+    sound_i2s_init(&sound_config);
+    sound_i2s_playback_start();
+    // Start the synth
+    g_synth.initialize();
+
+    // Launch the routine on the second core
+    multicore_launch_core1(core1_main);
+
     state.context = CTX_KEY;
     state.key = 48; // C3
     update_key();
     update_scale();
     set_instrument(0);
+    uint8_t control_number = dodepan_program_parameters[state.parameter];
+    state.argument = g_synth.current_controller_value(control_number);
 
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
-    gpio_init(LOW_BATT_LED_PIN);
-    gpio_set_dir(LOW_BATT_LED_PIN, GPIO_OUT);
-
     mpr121_i2c_init();
-
-    adc_init();
-    adc_gpio_init(PIN_BATT_LVL);
 
     rotary_encoder_t *encoder = create_encoder(ENCODER_DT_PIN, ENCODER_CLK_PIN, encoder_onchange);
     button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
 
-    #if defined USE_DISPLAY || defined USE_GYRO
+#if defined (USE_DISPLAY) || defined (USE_GYRO)
     gpio_init(SSD1306_SDA_PIN);
     gpio_init(SSD1306_SCL_PIN);
     gpio_set_function(SSD1306_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(SSD1306_SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(SSD1306_SDA_PIN);
     gpio_pull_up(SSD1306_SCL_PIN);
-    #endif
+#endif
 
     /* Display */
-    #ifdef USE_DISPLAY
+#if defined (USE_DISPLAY)
     i2c_init(SSD1306_I2C_PORT, SSD1306_I2C_FREQ);
     display_init(&display);
     display_draw(&display, &state);
-    #endif
+#endif
 
-    #ifdef USE_GYRO
+#if defined (USE_GYRO)
     imu_init(); // MPU6050
-    #endif
+#endif
 
     // Falloff values in case the IMU is disabled
     imu_data.deviation = 0.0f;
@@ -346,24 +387,25 @@ int main() {
     // tusb_init(); // tinyusb
 
     // Non-time-critical routine, run by timer
-    battery_check_init(5000, NULL, (void*)battery_low);
+    // battery_check_init(5000, NULL, (void*)battery_low_detected);
 
     // Use the onboard LED as a power-on indicator
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
     power_on_alarm_id = add_alarm_in_ms(500, power_on_complete, NULL, true);
-    
+
     static uint8_t throttle;
-    while (1) { // Main loop
+    while (true) { // Main loop
         mpr121_task();
-        #ifdef USE_GYRO
+        sleep_ms(1);
+#if defined (USE_GYRO)
         if(throttle++ % 10 == 0) { // Limit the call rate
             imu_task(&imu_data);
             bending(imu_data.deviation);
         } 
-        
-        #endif
+#endif
         // tud_task(); // tinyusb device task
+        i2s_audio_task();
     }
 }

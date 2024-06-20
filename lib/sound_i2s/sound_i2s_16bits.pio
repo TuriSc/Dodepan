@@ -1,0 +1,46 @@
+.program sound_i2s_16bits
+.side_set 2
+
+;                                /--- WS (left/right)
+;                                |/-- SCK (clock)
+;                                ||
+    set x, 14             side 0b01
+bitloop_left:
+    out pins, 1           side 0b00   ; write * 15
+    jmp x-- bitloop_left  side 0b01
+    out pins, 1           side 0b10   ; write
+
+    set x, 14             side 0b11
+bitloop_right:
+    out pins, 1           side 0b10   ; write * 15
+    jmp x-- bitloop_right side 0b11
+    out pins, 1           side 0b00   ; write
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void sound_i2s_16bits_program_init(PIO pio, uint sm, uint offset, uint sample_rate, uint data_pin, uint clock_pin_base) {
+  // configure PIO pins
+  uint pin_mask = (1u << data_pin) | (0b11 << clock_pin_base);
+  uint pin_dirs = (1u << data_pin) | (0b11 << clock_pin_base);
+  pio_sm_set_pindirs_with_mask(pio, sm, pin_dirs, pin_mask);
+
+  pio_gpio_init(pio, data_pin);
+  pio_gpio_init(pio, clock_pin_base);      // SCK
+  pio_gpio_init(pio, clock_pin_base + 1);  // WS
+
+  // configure PIO
+  pio_sm_config sm_config = sound_i2s_16bits_program_get_default_config(offset);
+
+  sm_config_set_out_pins(&sm_config, data_pin, 1);
+  sm_config_set_sideset_pins(&sm_config, clock_pin_base);
+  sm_config_set_out_shift(&sm_config, false, true, 0);
+  sm_config_set_fifo_join(&sm_config, PIO_FIFO_JOIN_TX);
+
+  uint f_clk_sys = frequency_count_khz(CLOCKS_FC0_SRC_VALUE_CLK_SYS);
+  sm_config_set_clkdiv(&sm_config, (f_clk_sys * 1000.f) / (sample_rate * 32 * 2.0f));  // 32 bits * 2 (clock signal goes high/low every bit)
+
+  pio_sm_init(pio, sm, offset, &sm_config);
+}
+
+%}

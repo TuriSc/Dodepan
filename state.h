@@ -13,12 +13,14 @@ typedef struct {
     uint8_t instrument;
     uint8_t context;                // The encoder affects different parameters
                                     // according to its current context
+    uint8_t parameter;
+    uint8_t argument;
 } state_t;
 
 #define CTX_KEY         0
 #define CTX_SCALE       1
 #define CTX_INSTRUMENT  2
-
-#define CTX_NUM         3
+#define CTX_PARAMETER   3
+#define CTX_ARGUMENT    4
 
 #endif
