@@ -43,8 +43,6 @@ PRA32_U_Synth g_synth;
 
 state_t state;
 
-struct audio_buffer_pool *ap;
-
 Imu_data imu_data;
 
 #if defined (USE_DISPLAY)
@@ -53,6 +51,7 @@ ssd1306_t display;
 
 static alarm_id_t blink_alarm_id;
 static alarm_id_t power_on_alarm_id;
+static alarm_id_t long_press_alarm_id;
 
 uint8_t audio_pin_slice;
 uint8_t num_scales = sizeof(scales)/sizeof(scales[0]);
@@ -136,8 +135,9 @@ void trigger_note_off(uint8_t note) {
 void bending() {
     // Use the IMU to alter a parameter according to device tilting.
     // The range of the deviation is between -0.5 and +0.5.
-
-    g_synth.control_change(FILTER_CUTOFF, (uint8_t)(64.0f + (imu_data.deviation_y + 0.5f) * 63.0f));
+    if(state.imu_dest & 0x02) {
+        g_synth.control_change(FILTER_CUTOFF, (uint8_t)(64.0f + (imu_data.deviation_y + 0.5f) * 63.0f));
+    }
     int32_t int_y = (int32_t)(imu_data.deviation_x * 32768.0);  // 32768 is 2^15
     uint16_t bend = (uint16_t)(((int_y + 0x4000) * 0x3FFF) >> 15);
     // We're keeping floating point operations to a minimum, since the Pico
@@ -149,7 +149,9 @@ void bending() {
     uint8_t bend_msb = (bend >> 7) & 0x7F;
 
     // Send the instruction to the synth
-    g_synth.pitch_bend(bend_lsb, bend_msb);
+    if(state.imu_dest & 0x01) {
+        g_synth.pitch_bend(bend_lsb, bend_msb);
+    }
 
     // Prepare the Midi message
     static uint8_t throttle;
@@ -169,6 +171,16 @@ int64_t blink_complete(alarm_id_t, void *) {
 
 int64_t power_on_complete(alarm_id_t, void *) {
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
+    return 0;
+}
+
+int64_t on_long_press(alarm_id_t, void *) {
+    if(state.context != CTX_IMU_CONFIG) {
+        state.context = CTX_IMU_CONFIG;
+    } else {
+        state.context = CTX_KEY;
+    }
+    display_draw(&display, &state);
     return 0;
 }
 
@@ -201,6 +213,9 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             case CTX_INSTRUMENT:
                 if(state.instrument < PRESET_PROGRAM_NUMBER_MAX + 1) set_instrument(state.instrument + 1);
             break;
+            case CTX_IMU_CONFIG:
+                state.imu_dest = (state.imu_dest == 0x3) ? 0x0 : state.imu_dest + 0x1;
+            break;
         }
     } else if (direction == -1) {
         switch (state.context) {
@@ -215,6 +230,9 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             case CTX_INSTRUMENT:
                 if(state.instrument > 0) set_instrument(state.instrument - 1);
             break;
+            case CTX_IMU_CONFIG:
+                state.imu_dest = (state.imu_dest == 0x0) ? 0x3 : state.imu_dest - 0x1;
+            break;
         }
     }
     display_draw(&display, &state);
@@ -222,17 +240,21 @@ void encoder_onchange(rotary_encoder_t *encoder) {
 
 void button_onchange(button_t *button_p) {
     button_t *button = (button_t*)button_p;
-    if(!button->state) { // Button pressed
-        switch(state.context){
-            case CTX_KEY:
-            case CTX_SCALE:
-            case CTX_INSTRUMENT:
-                state.context++;
-                if (state.context == CTX_INSTRUMENT + 1) { state.context = CTX_KEY; }
-            break;
-        }
-        display_draw(&display, &state);
+    if (long_press_alarm_id) cancel_alarm(long_press_alarm_id);
+    if(button->state) return; // Ignore button release
+    long_press_alarm_id = add_alarm_in_ms(1000, on_long_press, NULL, true);
+    switch(state.context){
+        case CTX_KEY:
+        case CTX_SCALE:
+        case CTX_INSTRUMENT:
+            state.context++;
+            if (state.context == CTX_INSTRUMENT + 1) { state.context = CTX_KEY; }
+        break;
+        case CTX_IMU_CONFIG:
+            state.context = CTX_KEY;
+        break;
     }
+    display_draw(&display, &state);
 }
 
 void battery_low_detected() { // TODO, new battery level display
@@ -303,6 +325,7 @@ int main() {
 
     state.context = CTX_KEY;
     state.key = 48; // C3
+    state.imu_dest = 0x3; // Both effects are active
     update_key();
     update_scale();
     set_instrument(0);
