@@ -21,6 +21,8 @@ typedef struct {
                                     // 0x1 - rolling the device bends the pitch
                                     // 0x2 - pitching (as in tilting) the device changes the filter cutoff frequency
                                     // 0x3 - (default) both effects are active
+
+    bool low_batt;                  // Low battery detected
 } state_t;
 
 #define CTX_KEY         0

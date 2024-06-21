@@ -11,7 +11,7 @@
 typedef bool boolean;
 typedef uint8_t byte;
 #include "hardware/gpio.h"
-#include "hardware/adc.h"
+#include "hardware/adc.h"   // Used for low battery detection
 #include "pico/binary_info.h"
 #include "pico/multicore.h"
 #include "sound_i2s.h"
@@ -252,14 +252,14 @@ void button_onchange(button_t *button_p) {
         break;
         case CTX_IMU_CONFIG:
             state.context = CTX_KEY;
+            state.low_batt=true;//Test
         break;
     }
     display_draw(&display, &state);
 }
 
-void battery_low_detected() { // TODO, new battery level display
-    // Low battery detected
-    // gpio_put(LOW_BATT_LED_PIN, 1);
+void battery_low_detected() {
+    state.low_batt = true;
     battery_check_stop(); // Stop the timer
 }
 
@@ -314,6 +314,14 @@ int main() {
 
     bi_decl_all();
 
+    // Initialize state
+    state.context = CTX_KEY;
+    state.key = 48; // C3
+    state.imu_dest = 0x3; // Both effects are active
+    update_key();
+    update_scale();
+    set_instrument(0);
+
     // Start the audio engine.
     sound_i2s_init(&sound_config);
     sound_i2s_playback_start();
@@ -323,21 +331,17 @@ int main() {
     // Launch the routine on the second core
     multicore_launch_core1(core1_main);
 
-    state.context = CTX_KEY;
-    state.key = 48; // C3
-    state.imu_dest = 0x3; // Both effects are active
-    update_key();
-    update_scale();
-    set_instrument(0);
-
-    gpio_init(LED_PIN);
+    gpio_init(LED_PIN); // TODO remove
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
+    // Initialize the touch module
     mpr121_i2c_init();
 
+    // Initialize the rotary encoder and switch
     rotary_encoder_t *encoder = create_encoder(ENCODER_DT_PIN, ENCODER_CLK_PIN, encoder_onchange);
     button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
 
+    // Initialize display and IMU (sharing an I²C bus)
 #if defined (USE_DISPLAY) || defined (USE_GYRO)
     gpio_init(SSD1306_SDA_PIN);
     gpio_init(SSD1306_SCL_PIN);
@@ -345,16 +349,16 @@ int main() {
     gpio_set_function(SSD1306_SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(SSD1306_SDA_PIN);
     gpio_pull_up(SSD1306_SCL_PIN);
+
+    i2c_init(SSD1306_I2C_PORT, SSD1306_I2C_FREQ);
 #endif
 
-    /* Display */
 #if defined (USE_DISPLAY)
-    i2c_init(SSD1306_I2C_PORT, SSD1306_I2C_FREQ);
     display_init(&display);
     display_draw(&display, &state);
 #endif
 
-#if defined (USE_GYRO) // TODO fallback i2c_init
+#if defined (USE_GYRO)
     imu_init(); // MPU6050
 #endif
 
@@ -366,14 +370,20 @@ int main() {
     // board_init(); // Midi
     // tusb_init(); // tinyusb
 
-    // Non-time-critical routine, run by timer
-    // battery_check_init(5000, NULL, (void*)battery_low_detected);
-
     // Use the onboard LED as a power-on indicator
     gpio_init(PICO_DEFAULT_LED_PIN);
     gpio_set_dir(PICO_DEFAULT_LED_PIN, GPIO_OUT);
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
     power_on_alarm_id = add_alarm_in_ms(500, power_on_complete, NULL, true);
+
+    // Show a short intro animation. This will distract the user
+    // while the hardware is calibrating
+    // intro_animation(); // Blocking
+
+    // Initialize the ADC, used for voltage sensing
+    adc_init();
+    // Non-time-critical routine, run by timer
+    battery_check_init(5000, NULL, (void*)battery_low_detected);
 
     static uint8_t throttle;
     while (true) { // Main loop

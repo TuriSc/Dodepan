@@ -29,7 +29,7 @@ void intro_animation(ssd1306_t *p) {
     }
 }
 
-#define OFFSET_X    34
+#define OFFSET_X    32
 void display_draw(ssd1306_t *p, state_t *st) {
     ssd1306_clear(p);
     switch(st->context) {
@@ -49,12 +49,12 @@ void display_draw(ssd1306_t *p, state_t *st) {
                     ssd1306_draw_line(p, 0, 31, 25, 31);
                 break;
                 case CTX_SCALE:
-                    ssd1306_draw_line(p, OFFSET_X, 11, 127, 11);
-                    ssd1306_draw_line(p, OFFSET_X, 12, 127, 12);
+                    ssd1306_draw_line(p, OFFSET_X, 11, 120, 11);
+                    ssd1306_draw_line(p, OFFSET_X, 12, 120, 12);
                 break;
                 case CTX_INSTRUMENT:
-                    ssd1306_draw_line(p, OFFSET_X, 30, 127, 30);
-                    ssd1306_draw_line(p, OFFSET_X, 31, 127, 31);
+                    ssd1306_draw_line(p, OFFSET_X, 30, 120, 30);
+                    ssd1306_draw_line(p, OFFSET_X, 31, 120, 31);
                 break;
             }
         }
@@ -75,6 +75,10 @@ void display_draw(ssd1306_t *p, state_t *st) {
                 break;
             }
         break;
+    }
+
+    if(st->low_batt) {
+        ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 123, 11);
     }
 
     ssd1306_show(p);
