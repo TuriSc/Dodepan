@@ -186,8 +186,6 @@ void encoder_onchange(rotary_encoder_t *encoder) {
         direction = (last_position < position ? 1 : -1);
     }
     last_position = position;
-    uint8_t control_number;
-    uint8_t num_parameters = sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]);
 
     if (direction == 1) {
         switch (state.context) {
@@ -203,16 +201,6 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             case CTX_INSTRUMENT:
                 if(state.instrument < PRESET_PROGRAM_NUMBER_MAX + 1) set_instrument(state.instrument + 1);
             break;
-            case CTX_PARAMETER:
-                if(state.parameter < num_parameters - 1) state.parameter++;
-                control_number = dodepan_program_parameters[state.parameter];
-                state.argument = g_synth.current_controller_value(control_number);
-            break;
-            case CTX_ARGUMENT:
-                if(state.argument < 128) state.argument++;
-                control_number = dodepan_program_parameters[state.parameter];
-                g_synth.control_change(control_number, state.argument);
-            break;
         }
     } else if (direction == -1) {
         switch (state.context) {
@@ -227,16 +215,6 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             case CTX_INSTRUMENT:
                 if(state.instrument > 0) set_instrument(state.instrument - 1);
             break;
-            case CTX_PARAMETER:
-                if(state.parameter > 0) state.parameter--;
-                control_number = dodepan_program_parameters[state.parameter];
-                state.argument = g_synth.current_controller_value(control_number);
-            break;
-            case CTX_ARGUMENT:
-                if(state.argument > 0) state.argument--;
-                // control_number = dodepan_program_parameters[state.parameter];
-                // g_synth.control_change(control_number, state.argument);
-            break;
         }
     }
     display_draw(&display, &state);
@@ -244,10 +222,7 @@ void encoder_onchange(rotary_encoder_t *encoder) {
 
 void button_onchange(button_t *button_p) {
     button_t *button = (button_t*)button_p;
-    static uint64_t pressed_time;
-    uint8_t num_parameters = sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]);
     if(!button->state) { // Button pressed
-        pressed_time = time_us_64();
         switch(state.context){
             case CTX_KEY:
             case CTX_SCALE:
@@ -255,33 +230,8 @@ void button_onchange(button_t *button_p) {
                 state.context++;
                 if (state.context == CTX_INSTRUMENT + 1) { state.context = CTX_KEY; }
             break;
-            case CTX_PARAMETER:
-                state.context = CTX_ARGUMENT;
-            break;
-            case CTX_ARGUMENT:
-                state.context = CTX_PARAMETER;
-                uint8_t control_number = dodepan_program_parameters[state.parameter];
-                g_synth.control_change(control_number, state.argument);
-            break;
         }
         display_draw(&display, &state);
-    } else { // Button released
-        uint64_t released_time = time_us_64();
-        if(released_time - pressed_time > 2000*1000) { // Held for more than 2 seconds
-            switch(state.context){
-                case CTX_KEY:
-                case CTX_SCALE:
-                case CTX_INSTRUMENT:
-                    state.context = CTX_PARAMETER;
-                break;
-                case CTX_PARAMETER:
-                case CTX_ARGUMENT:
-                    state.context = CTX_KEY;
-                break;
-            }
-
-            display_draw(&display, &state);
-        }
     }
 }
 
@@ -356,8 +306,6 @@ int main() {
     update_key();
     update_scale();
     set_instrument(0);
-    uint8_t control_number = dodepan_program_parameters[state.parameter];
-    state.argument = g_synth.current_controller_value(control_number);
 
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);

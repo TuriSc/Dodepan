@@ -20,7 +20,5 @@ typedef struct {
 #define CTX_KEY         0
 #define CTX_SCALE       1
 #define CTX_INSTRUMENT  2
-#define CTX_PARAMETER   3
-#define CTX_ARGUMENT    4
 
 #endif
