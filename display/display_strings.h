@@ -53,16 +53,13 @@ const char *octave_names[] = {
 
 const char *instrument_names[] = {
     "Dodepan",
-    // The default presets written by Ryo
-    // for PRA32-U had no names, so I
-    // made these up!
-    "Supersaw",
+    "Fifth Lead",
     "Strings",
-    "Funky",
-    "Acoustic Bass",
-    "Woozy",
-    "Sawblade",
-    "Deadened",
+    "Brass",
+    "Pad",
+    "Synth Bass",
+    "PWM Lead",
+    "Electric Piano",
     "Square Tone",
     };
 

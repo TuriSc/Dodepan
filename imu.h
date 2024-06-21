@@ -8,7 +8,8 @@ extern "C" {
 
 typedef struct {            // Accelerometer/gyroscope data, with fallback.
     float acceleration;     // Also used to calculate velocity for Midi.
-    float deviation;        // Bending amount.
+    float deviation_x;
+    float deviation_y;
 } Imu_data;
 
 void imu_init();

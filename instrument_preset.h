@@ -64,62 +64,62 @@ const uint8_t dodepan_program_parameters[] = {
 // See PRA32-U-Parameter-Guide.md for more guidance
 
 const uint8_t dodepan_program[] = {
-     50, // OSC_1_WAVE - Triangle wave for a mellow sound
-      0, // OSC_1_SHAPE - Ignore waveform shaping as Osc 1 Wave is not pulse
-     64, // OSC_1_MORPH - Ignore waveform morphing as Osc 1 Wave is not pulse
+      5, // OSC_1_WAVE - Pulse wave for a percussive sound
+     88, // OSC_1_SHAPE - Mellow waveform shaping
+    106, // OSC_1_MORPH - Add some waveform morphing
     127, // MIXER_SUB_OSC - Sub Osc 100%
         
-      0, // OSC_2_WAVE - Sawtooth wave for a brighter and piercing sound
+      2, // OSC_2_WAVE - Triangle wave for a bright sound
      52, // OSC_2_COARSE - One octave (12 semitones) lower than OSC_1
-      0, // OSC_2_PITCH - Keep tuning sharp
-     40, // MIXER_OSC_MIX - Favor OSC_1 // TODO
+     64, // OSC_2_PITCH - Keep tuning sharp
+     80, // MIXER_OSC_MIX - Favor OSC_2
         
-    100, // FILTER_CUTOFF - Emphasize midrange frequencies
-     80, // FILTER_RESO - (Q = 2.8) Add a gentle wobble to the sound
-     40, // FILTER_EG_AMT - Moderately influence the filter cutoff frequency
-     96, // FILTER_KEY_TRK - Track the key pitch fairly closely
+     90, // FILTER_CUTOFF - Emphasize midrange frequencies
+     90, // FILTER_RESO - Add a gentle pinch to the sound
+     60, // FILTER_EG_AMT - Swell lightly, like a handpan
+     127, // FILTER_KEY_TRK - Max key tracking
         
-     32, // EG_ATTACK - Swell like a handpan
-     59, // EG_DECAY - ~150 ms, ringing a little
-     20, // EG_SUSTAIN - 
-     88, // EG_RELEASE - Allowing the sound to decay slowly
+      8, // EG_ATTACK - Quick attack
+     70, // EG_DECAY - Allow the filter to open a bit
+      0, // EG_SUSTAIN - No sustain
+      0, // EG_RELEASE - Disabled
         
-     64, // EG_OSC_AMT ? // TODO
-      0, // EG_OSC_DST ? // TODO 
+     64, // EG_OSC_AMT - No effect
+      0, // EG_OSC_DST - Not in use
       0, // VOICE_MODE - Polyphonic (LFO Single Trigger)
       0, // PORTAMENTO - Omit portamento to preserve sound clarity
         
-     25, // LFO_WAVE - Sine wave
-     80, // LFO_RATE - (6.9 Hz) A slow rate for subtle wavering effect
-     25, // LFO_DEPTH // TODO
-      0, // LFO_FADE_TIME - No fade // TODO fade in or fade out?
+      1, // LFO_WAVE - Sine wave
+     16, // LFO_RATE - A slow rate for subtle wavering effect
+     20, // LFO_DEPTH - Just enough to add some variation
+      0, // LFO_FADE_TIME - No fade
         
-     96, // LFO_OSC_AMT - Add a touch of vibrato // TODO
+     64, // LFO_OSC_AMT - Add a touch of vibrato
       0, // LFO_OSC_DST - Omit LFO modulation of the oscillator's destination
-     74, // LFO_FILTER_AMT - Very light LFO modulation of the filter
+     88, // LFO_FILTER_AMT - Very light LFO modulation of the filter
     127, // AMP_GAIN - Maximize the amplifier's gain
         
-     93, // AMP_ATTACK ?
-     59, // AMP_DECAY ?
-     56, // AMP_SUSTAIN ?
-     64, // AMP_RELEASE ?
+      8, // AMP_ATTACK - Quick attack
+     78, // AMP_DECAY - Ring a little
+      4, // AMP_SUSTAIN - Minimal sustain as it's a percussive instrument 
+      0, // AMP_RELEASE - Disabled
         
-      0, // FILTER_MODE ? - Low Pass
-      1, // EG_AMP_MOD - On, Amp ADSR = EG ADSR
-      0, // REL_EQ_DECAY - Neutral release EQ decay
-      2, // P_BEND_RANGE - Two semitones
+      0, // FILTER_MODE - Low Pass
+      0, // EG_AMP_MOD - Off, EG ADSR does not overwrite Amp ADSR
+      1, // REL_EQ_DECAY - On (Release = Decay)
+      2, // P_BEND_RANGE - +/- two semitones
         
      64, // BTH_FILTER_AMT - Breath does not affect the filter
       0, // BTH_AMP_MOD - No breath amp modulation
-    127, // EG_VEL_SENS - ? EG velocity sensitivity // TODO
-    127, // AMP_VEL_SENS - ? Amp velocity sensitivity // TODO
+      0, // EG_VEL_SENS - No EG velocity sensitivity
+      0, // AMP_VEL_SENS - No Amp velocity sensitivity
         
-    127, // CHORUS_MIX ? // TODO
-     94, // CHORUS_RATE - ~2 Hz LFO Frequency
-     16, // CHORUS_DEPTH - ~1 ms
+    116, // CHORUS_MIX - Mostly wet, like laundry on a balcony on a rainy day
+     20, // CHORUS_RATE - 0.134 Hz LFO Frequency
+     90, // CHORUS_DEPTH - ~3.95 ms
         
         
-     64, // DELAY_FEEDBACK - ~25%
-     72, // DELAY_TIME - 200 ms
-    127, // DELAY_MODE - Ping Pong Delay
+    127, // DELAY_FEEDBACK - 49.6%
+     12, // DELAY_TIME - 20 ms
+      1, // DELAY_MODE - Ping Pong Delay
 };

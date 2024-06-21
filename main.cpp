@@ -1,7 +1,7 @@
 /* Dodepan
  * Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out.
  * By Turi Scandurra – https://turiscandurra.com/circuits
- * v2.1.2b - 2024.06.11
+ * v2.2.2b - 2024.06.21
  */
 
 #include <stdio.h>
@@ -133,28 +133,31 @@ void trigger_note_off(uint8_t note) {
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
-void bending(float deviation) {
+void bending() {
     // Use the IMU to alter a parameter according to device tilting.
-    // The range of the deviation parameter is between -1 and 1 inclusive.
-    // Parameters have a minimum, a maximum, and a center value, for example
-    // FILTER_CUTOFF goes from 0 to 120, with 60 being the center value.
-    // int8_t cutoff = 60 + (60 * deviation);
-    // set_parameter(FILTER_CUTOFF, cutoff);
+    // The range of the deviation is between -0.5 and +0.5.
 
-    // For pitch bending use this instead:
-    // int8_t pitch = 16 + (32 * deviation);
-    // set_parameter(OSC_2_FINE_PITCH, pitch);
-    // g_synth.pitch_bend((bend + 8192) & 0x7F, (bend + 8192) >> 7);
+    g_synth.control_change(FILTER_CUTOFF, (uint8_t)(64.0f + (imu_data.deviation_y + 0.5f) * 63.0f));
+    int32_t int_y = (int32_t)(imu_data.deviation_x * 32768.0);  // 32768 is 2^15
+    uint16_t bend = (uint16_t)(((int_y + 0x4000) * 0x3FFF) >> 15);
+    // We're keeping floating point operations to a minimum, since the Pico
+    // does not have an FPU. An equivalent arithmetic operation would have been:
+    // uint16_t bend = (uint16_t)((imu_data.deviation_y + 0.5f) * 16383.0f);
 
-    // Prepare Midi message
+    // Split the bytes
+    uint8_t bend_lsb = bend & 0x7F;
+    uint8_t bend_msb = (bend >> 7) & 0x7F;
+
+    // Send the instruction to the synth
+    g_synth.pitch_bend(bend_lsb, bend_msb);
+
+    // Prepare the Midi message
     static uint8_t throttle;
     if(throttle++ % 10 != 0) return; // Further limit the message rate
     // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
     // with 8192 (0x2000) being the center value.
-    unsigned int pitchval = (deviation+1.f)*8192;
-    if (pitchval > 16383) pitchval = 16383;
-    // Send Midi message
-    // tudi_midi_write24 (0, 0xE0, (pitchval & 0x7F), (pitchval >> 7) & 0x7F);
+    // Send the Midi message
+    // tudi_midi_write24 (0, 0xE0, bend_lsb, bend_msb);
 }
 
 /* I/O functions */
@@ -231,8 +234,8 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             break;
             case CTX_ARGUMENT:
                 if(state.argument > 0) state.argument--;
-                control_number = dodepan_program_parameters[state.parameter];
-                g_synth.control_change(control_number, state.argument);
+                // control_number = dodepan_program_parameters[state.parameter];
+                // g_synth.control_change(control_number, state.argument);
             break;
         }
     }
@@ -257,6 +260,8 @@ void button_onchange(button_t *button_p) {
             break;
             case CTX_ARGUMENT:
                 state.context = CTX_PARAMETER;
+                uint8_t control_number = dodepan_program_parameters[state.parameter];
+                g_synth.control_change(control_number, state.argument);
             break;
         }
         display_draw(&display, &state);
@@ -321,12 +326,15 @@ static inline void i2s_audio_task() {
                               // the original PRA32-U code
         for (int i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
             uint16_t level = g_synth.process(right_buffer);
-            // level = (int64_t)level * (int32_t)volume >> 16; // TODO, use main volume
             // Copy to I2S buffer
             *buffer++ = level;
             *buffer++ = level;
         }
     }
+}
+// TESTING
+uint8_t rand_uint8_t(uint8_t min, uint8_t max) {
+    return (uint8_t)(rand() % (max - min + 1) + min);
 }
 
 int main() {
@@ -375,13 +383,14 @@ int main() {
     display_draw(&display, &state);
 #endif
 
-#if defined (USE_GYRO)
+#if defined (USE_GYRO) // TODO fallback i2c_init
     imu_init(); // MPU6050
 #endif
 
     // Falloff values in case the IMU is disabled
-    imu_data.deviation = 0.0f;
     imu_data.acceleration = 1.0f;
+    imu_data.deviation_x = 0.0f;
+    imu_data.deviation_y = 0.0f;
 
     // board_init(); // Midi
     // tusb_init(); // tinyusb
@@ -402,7 +411,7 @@ int main() {
 #if defined (USE_GYRO)
         if(throttle++ % 10 == 0) { // Limit the call rate
             imu_task(&imu_data);
-            bending(imu_data.deviation);
+            bending();
         } 
 #endif
         // tud_task(); // tinyusb device task
