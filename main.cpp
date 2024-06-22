@@ -297,6 +297,12 @@ int main() {
 
     bi_decl_all();
 
+    // Start the audio engine.
+    sound_i2s_init(&sound_config);
+    sound_i2s_playback_start();
+    // Start the synth
+    g_synth.initialize();
+
     // Initialize state
     state.context = CTX_KEY;
     state.key = 48; // C3
@@ -304,12 +310,6 @@ int main() {
     update_key();
     update_scale();
     set_instrument(0);
-
-    // Start the audio engine.
-    sound_i2s_init(&sound_config);
-    sound_i2s_playback_start();
-    // Start the synth
-    g_synth.initialize();
 
     // Launch the routine on the second core
     multicore_launch_core1(core1_main);

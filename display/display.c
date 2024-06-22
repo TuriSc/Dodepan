@@ -78,6 +78,8 @@ void display_draw(ssd1306_t *p, state_t *st) {
     }
 
     if(st->low_batt) {
+        // Clear an outline around the icon to avoid overlaps
+        ssd1306_clear_square(p, 119, 8, 9, 16);
         ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 121, 9);
     }
 
