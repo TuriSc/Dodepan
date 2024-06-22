@@ -78,7 +78,7 @@ void display_draw(ssd1306_t *p, state_t *st) {
     }
 
     if(st->low_batt) {
-        ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 123, 11);
+        ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 121, 9);
     }
 
     ssd1306_show(p);

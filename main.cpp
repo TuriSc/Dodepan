@@ -49,14 +49,11 @@ Imu_data imu_data;
 ssd1306_t display;
 #endif
 
-static alarm_id_t blink_alarm_id;
 static alarm_id_t power_on_alarm_id;
 static alarm_id_t long_press_alarm_id;
 
 uint8_t audio_pin_slice;
 uint8_t num_scales = sizeof(scales)/sizeof(scales[0]);
-
-void blink();
 
 void core1_main() {
     while(true) { g_synth.secondary_core_process(); }
@@ -117,14 +114,13 @@ void set_instrument(uint8_t instr) {
 
 void trigger_note_on(uint8_t note) {
     // Set the decay according to accelerometer data.
-    // The range of decay is 0-64, but here we're clamping it to 32-48.
+    // The range of decay is 0-64, but here we're clamping it to 32-48
     int8_t decay = 32 + (16 * imu_data.acceleration);
-    // set_parameter(EG_DECAY_TIME, decay); // TODO
     // The range of velocity is 0-127, but here we're clamping it to 64-127
     uint8_t velocity = 64 + (63 * imu_data.acceleration);
-    // tudi_midi_write24(0, 0x90, note, velocity);
+
     g_synth.note_on(note, velocity);
-    blink();
+    // tudi_midi_write24(0, 0x90, note, velocity);
 }
 
 void trigger_note_off(uint8_t note) {
@@ -164,11 +160,6 @@ void bending() {
 
 /* I/O functions */
 
-int64_t blink_complete(alarm_id_t, void *) {
-    gpio_put(LED_PIN, 0);
-    return 0;
-}
-
 int64_t power_on_complete(alarm_id_t, void *) {
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
     return 0;
@@ -182,12 +173,6 @@ int64_t on_long_press(alarm_id_t, void *) {
     }
     display_draw(&display, &state);
     return 0;
-}
-
-void blink() { // LED blinks for 0.1 seconds when a note is played
-    gpio_put(LED_PIN, 1);
-    if (blink_alarm_id) cancel_alarm(blink_alarm_id);
-    blink_alarm_id = add_alarm_in_us(100000, blink_complete, NULL, true);
 }
 
 void encoder_onchange(rotary_encoder_t *encoder) {
@@ -264,16 +249,18 @@ void battery_low_detected() {
 }
 
 void bi_decl_all() {
+    // Declare some binary information
     bi_decl(bi_program_name(PROGRAM_NAME));
     bi_decl(bi_program_description(PROGRAM_DESCRIPTION));
     bi_decl(bi_program_version_string(PROGRAM_VERSION));
     bi_decl(bi_program_url(PROGRAM_URL));
-    bi_decl(bi_1pin_with_name(LED_PIN, LED_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SDA_PIN, MPR121_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(MPR121_SCL_PIN, MPR121_SCL_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_DT_PIN, ENCODER_DT_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_CLK_PIN, ENCODER_CLK_DESCRIPTION));
     bi_decl(bi_1pin_with_name(ENCODER_SWITCH_PIN, ENCODER_SWITCH_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(BATT_LVL_PIN, BATT_LVL_DESCRIPTION));
+    
 #if defined USE_DISPLAY && defined USE_GYRO
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_MPU6050_SCL_DESCRIPTION));
@@ -304,10 +291,6 @@ static inline void i2s_audio_task() {
         }
     }
 }
-// TESTING
-uint8_t rand_uint8_t(uint8_t min, uint8_t max) {
-    return (uint8_t)(rand() % (max - min + 1) + min);
-}
 
 int main() {
     stdio_init_all();
@@ -330,9 +313,6 @@ int main() {
 
     // Launch the routine on the second core
     multicore_launch_core1(core1_main);
-
-    gpio_init(LED_PIN); // TODO remove
-    gpio_set_dir(LED_PIN, GPIO_OUT);
 
     // Initialize the touch module
     mpr121_i2c_init();

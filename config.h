@@ -10,12 +10,8 @@
 #define USB_STR_PRODUCT         "Dodepan"
 
 /* I/O */
-#define LED_PIN                     18
-#define LED_DESCRIPTION             "Touch feedback LED"
-#define LOW_BATT_LED_PIN            17
-#define LOW_BATT_LED_DESCRIPTION    "Low battery LED"
-#define LOW_BATT_THRESHOLD          3250 // 3.25V
-#define PIN_BATT_LVL                29
+#define BATT_LVL_PIN                29
+#define BATT_LVL_DESCRIPTION        "Battery sensing pin"
 
 #define ENCODER_CLK_PIN             19
 #define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
