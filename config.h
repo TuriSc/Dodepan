@@ -23,7 +23,7 @@
                                              // presses to trigger a double-click
 
 /* SSD1306 Display */
-// #define USE_DISPLAY
+#define USE_DISPLAY
 #define SSD1306_I2C_PORT            i2c1
 #define SSD1306_SDA_PIN             6 // i2c1
 #define SSD1306_SDA_DESCRIPTION     "SSD1306 SDA"
@@ -36,7 +36,7 @@
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // Note: the display and the MPU share the same I²S bus and pins
-// #define USE_GYRO                    // The IMU is optional, but gives you velocity and bending
+#define USE_GYRO                    // The IMU is optional, but gives you velocity and bending
 #define MPU6050_I2C_PORT            i2c1
 #define MPU6050_SDA_PIN             SSD1306_SDA_PIN
 #define MPU6050_SDA_DESCRIPTION     "MPU6050 SDA"
