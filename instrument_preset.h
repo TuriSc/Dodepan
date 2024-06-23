@@ -69,18 +69,18 @@ const uint8_t dodepan_program[] = {
     106, // OSC_1_MORPH - Add some waveform morphing
     127, // MIXER_SUB_OSC - Sub Osc 100%
         
-      2, // OSC_2_WAVE - Triangle wave for a bright sound
+      0, // OSC_2_WAVE - Saw wave for a bright sound
      52, // OSC_2_COARSE - One octave (12 semitones) lower than OSC_1
-     64, // OSC_2_PITCH - Keep tuning sharp
+     64, // OSC_2_PITCH - +0, keep tuning sharp
      80, // MIXER_OSC_MIX - Favor OSC_2
         
-     90, // FILTER_CUTOFF - Emphasize midrange frequencies
+     70, // FILTER_CUTOFF - Emphasize midrange frequencies
      90, // FILTER_RESO - Add a gentle pinch to the sound
      60, // FILTER_EG_AMT - Swell lightly, like a handpan
      127, // FILTER_KEY_TRK - Max key tracking
         
       8, // EG_ATTACK - Quick attack
-     70, // EG_DECAY - Allow the filter to open a bit
+     90, // EG_DECAY - Allow the filter to open a bit
       0, // EG_SUSTAIN - No sustain
       0, // EG_RELEASE - Disabled
         
@@ -100,8 +100,8 @@ const uint8_t dodepan_program[] = {
     127, // AMP_GAIN - Maximize the amplifier's gain
         
       8, // AMP_ATTACK - Quick attack
-     78, // AMP_DECAY - Ring a little
-      4, // AMP_SUSTAIN - Minimal sustain as it's a percussive instrument 
+     98, // AMP_DECAY - Ring a little
+      0, // AMP_SUSTAIN - No sustain as it's a percussive instrument 
       0, // AMP_RELEASE - Disabled
         
       0, // FILTER_MODE - Low Pass
@@ -112,7 +112,7 @@ const uint8_t dodepan_program[] = {
      64, // BTH_FILTER_AMT - Breath does not affect the filter
       0, // BTH_AMP_MOD - No breath amp modulation
       0, // EG_VEL_SENS - No EG velocity sensitivity
-      0, // AMP_VEL_SENS - No Amp velocity sensitivity
+    127, // AMP_VEL_SENS - Maximum Amp velocity sensitivity
         
     116, // CHORUS_MIX - Mostly wet, like laundry on a balcony on a rainy day
      20, // CHORUS_RATE - 0.134 Hz LFO Frequency

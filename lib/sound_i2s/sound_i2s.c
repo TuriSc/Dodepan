@@ -40,7 +40,7 @@ int sound_i2s_init(const struct sound_i2s_config *cfg)
   config = *cfg;
 
   // allocate sound buffers
-  size_t sound_buffer_size = 4 * SOUND_I2S_BUFFER_NUM_SAMPLES;
+  size_t sound_buffer_size = 4 * config.samples_per_buffer;
   sound_sample_buffers[0] = malloc(sound_buffer_size);
   sound_sample_buffers[1] = malloc(sound_buffer_size);
   if (! sound_sample_buffers[0] || ! sound_sample_buffers[1]) {
@@ -55,7 +55,7 @@ int sound_i2s_init(const struct sound_i2s_config *cfg)
   sound_pio = (config.pio_num == 0) ? pio0 : pio1;
   uint offset = pio_add_program(sound_pio, &sound_i2s_16bits_program);
   sound_pio_sm = pio_claim_unused_sm(sound_pio, true);
-    sound_i2s_16bits_program_init(sound_pio, sound_pio_sm, offset, config.sample_rate, config.pin_sda, config.pin_scl);
+  sound_i2s_16bits_program_init(sound_pio, sound_pio_sm, offset, config.sample_rate, config.pin_sda, config.pin_scl);
 
   // allocate dma channel and setup irq
   sound_dma_chan = dma_claim_unused_channel(true);
@@ -63,11 +63,7 @@ int sound_i2s_init(const struct sound_i2s_config *cfg)
   irq_set_exclusive_handler(DMA_IRQ_0, dma_handler);
   irq_set_priority(DMA_IRQ_0, 0xff);
   irq_set_enabled(DMA_IRQ_0, true);
-  return 0;
-}
 
-void sound_i2s_playback_start(void)
-{
   // reset buffer
   sound_i2s_num_buffers_played = 0;
   sound_cur_buffer_num = 0;
@@ -85,9 +81,10 @@ void sound_i2s_playback_start(void)
   dma_channel_configure(sound_dma_chan, &dma_cfg,
                         &sound_pio->txf[sound_pio_sm],  // destination
                         buffer,                         // source
-                        SOUND_I2S_BUFFER_NUM_SAMPLES,   // number of dma transfers
+                        config.samples_per_buffer,   // number of dma transfers
                         true                            // start immediatelly (will be blocked by pio)
                         );
+  return 0;
 }
 
 int16_t *sound_i2s_get_next_buffer()

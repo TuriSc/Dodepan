@@ -30,13 +30,15 @@ typedef uint8_t byte;
 #include "state.h"
 
 /* Audio */
-    static const struct sound_i2s_config sound_config = {
-        .pio_num         = I2S_PIO_NUM,
-        .pin_scl         = I2S_CLOCK_PIN_BASE,
-        .pin_sda         = I2S_DATA_PIN,
-        .pin_ws          = I2S_CLOCK_PIN_BASE + 1,
-        .sample_rate     = SOUND_OUTPUT_FREQUENCY,
-    };
+static const struct sound_i2s_config sound_config = {
+    .pio_num         = I2S_PIO_NUM,
+    .pin_scl         = I2S_CLOCK_PIN_BASE,
+    .pin_sda         = I2S_DATA_PIN,
+    .pin_ws          = I2S_CLOCK_PIN_BASE + 1,
+    .sample_rate     = SOUND_OUTPUT_FREQUENCY,
+    .bits_per_sample = 16,
+    .samples_per_buffer = AUDIO_BUFFER_LENGTH,
+};
 
 /* Globals */
 PRA32_U_Synth g_synth;
@@ -52,12 +54,7 @@ ssd1306_t display;
 static alarm_id_t power_on_alarm_id;
 static alarm_id_t long_press_alarm_id;
 
-uint8_t audio_pin_slice;
 uint8_t num_scales = sizeof(scales)/sizeof(scales[0]);
-
-void core1_main() {
-    while(true) { g_synth.secondary_core_process(); }
-}
 
 /* Note and audio functions */
 
@@ -158,6 +155,22 @@ void bending() {
     // tudi_midi_write24 (0, 0xE0, bend_lsb, bend_msb);
 }
 
+static inline void i2s_audio_task(void) {
+    static int16_t *last_buffer;
+    int16_t *buffer = sound_i2s_get_next_buffer();
+    int16_t right_buffer; // Necessary quirk for compatibility with
+                          // the original PRA32-U code
+            
+    if (buffer != last_buffer) { 
+        last_buffer = buffer;
+        for (int i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
+        short sample = g_synth.process(right_buffer);
+        *buffer++ = sample;
+        *buffer++ = sample;
+        }
+    }
+}
+
 /* I/O functions */
 
 int64_t power_on_complete(alarm_id_t, void *) {
@@ -171,7 +184,10 @@ int64_t on_long_press(alarm_id_t, void *) {
     } else {
         state.context = CTX_KEY;
     }
+
+#if defined (USE_DISPLAY)
     display_draw(&display, &state);
+#endif
     return 0;
 }
 
@@ -220,7 +236,9 @@ void encoder_onchange(rotary_encoder_t *encoder) {
             break;
         }
     }
+#if defined (USE_DISPLAY)
     display_draw(&display, &state);
+#endif
 }
 
 void button_onchange(button_t *button_p) {
@@ -240,7 +258,9 @@ void button_onchange(button_t *button_p) {
             state.low_batt=true;//Test
         break;
     }
+#if defined (USE_DISPLAY)
     display_draw(&display, &state);
+#endif
 }
 
 void battery_low_detected() {
@@ -276,30 +296,28 @@ void bi_decl_all() {
     I2S_CLOCK_PIN_BASE+1, I2S_LRCK_DESCRIPTION));
 }
 
-static inline void i2s_audio_task() {
-    static int16_t *last_buffer;
-    int16_t *buffer = sound_i2s_get_next_buffer();
-    if (buffer != last_buffer) {
-        last_buffer = buffer;
-        int16_t right_buffer; // Necessary quirk for compatibility with
-                              // the original PRA32-U code
-        for (int i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
-            uint16_t level = g_synth.process(right_buffer);
-            // Copy to I2S buffer
-            *buffer++ = level;
-            *buffer++ = level;
-        }
+void core1_main() {
+    while(true) {
+        g_synth.secondary_core_process();
+        i2s_audio_task();
     }
 }
 
 int main() {
+    // Adjust the clock speed to be an even multiplier of the audio
+    // sampling frequency
+    if (SOUND_OUTPUT_FREQUENCY % 11025 == 0) { // For 22.05, 44.1, 88.2 kHz
+        set_sys_clock_khz(135600, false);
+    } else if (SOUND_OUTPUT_FREQUENCY % 8000 == 0) { // For 8, 16, 32, 48, 96, 192 kHz
+        set_sys_clock_khz(147600, false);
+    }
     stdio_init_all();
 
     bi_decl_all();
 
     // Start the audio engine.
     sound_i2s_init(&sound_config);
-    sound_i2s_playback_start();
+
     // Start the synth
     g_synth.initialize();
 
@@ -368,7 +386,6 @@ int main() {
     static uint8_t throttle;
     while (true) { // Main loop
         mpr121_task();
-        sleep_ms(1);
 #if defined (USE_GYRO)
         if(throttle++ % 10 == 0) { // Limit the call rate
             imu_task(&imu_data);
@@ -376,6 +393,6 @@ int main() {
         } 
 #endif
         // tud_task(); // tinyusb device task
-        i2s_audio_task();
+        // i2s_audio_task();
     }
 }
