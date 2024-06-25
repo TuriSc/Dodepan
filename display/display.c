@@ -37,11 +37,11 @@ void display_draw(ssd1306_t *p, state_t *st) {
         case CTX_SCALE:
         case CTX_INSTRUMENT:
         {
-            ssd1306_draw_string_with_font(p, 0, 0, 1, key_font, note_names[st->tonic]);
+            ssd1306_draw_string_with_font(p, 0, 4, 1, key_font, note_names[st->tonic]);
             if(st->is_alteration) { ssd1306_draw_string_with_font(p, 15, 0, 1, diesis_font, diesis); }
             ssd1306_draw_string_with_font(p, 15, 16, 1, octave_font, octave_names[st->octave]);
-            ssd1306_draw_string(p, OFFSET_X, 0, 1, scale_names[st->scale]);
-            ssd1306_draw_string(p, OFFSET_X, 19, 1, instrument_names[st->instrument]);
+            ssd1306_draw_string(p, OFFSET_X, 19, 1, scale_names[st->scale]);
+            ssd1306_draw_string(p, OFFSET_X, 0, 1, instrument_names[st->instrument]);
             
             switch(st->context) {
                 case CTX_KEY:
@@ -49,12 +49,12 @@ void display_draw(ssd1306_t *p, state_t *st) {
                     ssd1306_draw_line(p, 0, 31, 25, 31);
                 break;
                 case CTX_SCALE:
-                    ssd1306_draw_line(p, OFFSET_X, 11, 120, 11);
-                    ssd1306_draw_line(p, OFFSET_X, 12, 120, 12);
-                break;
-                case CTX_INSTRUMENT:
                     ssd1306_draw_line(p, OFFSET_X, 30, 120, 30);
                     ssd1306_draw_line(p, OFFSET_X, 31, 120, 31);
+                break;
+                case CTX_INSTRUMENT:
+                    ssd1306_draw_line(p, OFFSET_X, 11, 120, 11);
+                    ssd1306_draw_line(p, OFFSET_X, 12, 120, 12);
                 break;
             }
         }
@@ -75,7 +75,23 @@ void display_draw(ssd1306_t *p, state_t *st) {
                 break;
             }
         break;
+        case CTX_VOLUME:
+        {
+            // Draw the volume bars
+            uint8_t increments = 128 / VOL_INCR;
+            uint8_t gap = (128 / increments / 4);
+            uint8_t width = 128 / increments - gap;
+            // for(uint8_t i=VOL_MIN; i <= 127; i += VOL_INCR){
+            for (uint8_t i = 0; i < increments; i++) {
+                if(st->volume >= VOL_MIN + i * VOL_INCR) {
+                    uint8_t x = i * width + i * gap;
+                    ssd1306_draw_square(p, x, 4, width, 24);
+                }
+            }
+        }
+        break;
     }
+
 
     if(st->low_batt) {
         // Clear an outline around the icon to avoid overlaps

@@ -90,6 +90,16 @@ void update_scale() {
     }
 }
 
+void update_volume() {
+    // Clip values
+    if (state.volume < VOL_MIN) {
+        state.volume = VOL_MIN;
+    } else if (state.volume > 127) {
+        state.volume = 127;
+    }
+    g_synth.control_change(dodepan_program_parameters[AMP_GAIN], state.volume);
+}
+
 void set_instrument(uint8_t instr) {
     switch (instr) {
         case 0: // Load custom Dodepan preset
@@ -98,7 +108,7 @@ void set_instrument(uint8_t instr) {
             }
         break;
         default: // Load PRA32-U presets
-            g_synth.program_change(instr - 1); 
+            g_synth.program_change(instr - 1);
         break;
     }
     state.instrument = instr;
@@ -148,7 +158,7 @@ void bending() {
 
     // Prepare the Midi message
     static uint8_t throttle;
-    if(throttle++ % 10 != 0) return; // Further limit the message rate
+    if(throttle++ % 10 != 0) return; // Limit the message rate
     // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
     // with 8192 (0x2000) being the center value.
     // Send the Midi message
@@ -179,11 +189,19 @@ int64_t power_on_complete(alarm_id_t, void *) {
 }
 
 int64_t on_long_press(alarm_id_t, void *) {
-    if(state.context != CTX_IMU_CONFIG) {
-        state.context = CTX_IMU_CONFIG;
-    } else {
-        state.context = CTX_KEY;
-    }
+     switch(state.context) {
+        case CTX_KEY:
+        case CTX_SCALE:
+        case CTX_INSTRUMENT:
+            state.context = CTX_IMU_CONFIG;
+        break;
+        case CTX_IMU_CONFIG:
+            state.context = CTX_VOLUME;
+        break;
+        case CTX_VOLUME:
+            // Do nothing
+        break;
+     }
 
 #if defined (USE_DISPLAY)
     display_draw(&display, &state);
@@ -204,35 +222,43 @@ void encoder_onchange(rotary_encoder_t *encoder) {
         switch (state.context) {
             case CTX_KEY:
                 // D#7 is the highest note that can be set as root note
-                if(state.key < 99) state.key++;
+                if(state.key < 99) { state.key++; }
                 update_key();
             break;
             case CTX_SCALE:
-                if(state.scale < num_scales - 1) state.scale++;
+                if(state.scale < num_scales - 1) { state.scale++; }
                 update_scale();
             break;
             case CTX_INSTRUMENT:
-                if(state.instrument < PRESET_PROGRAM_NUMBER_MAX + 1) set_instrument(state.instrument + 1);
+                if(state.instrument < PRESET_PROGRAM_NUMBER_MAX + 1) { set_instrument(state.instrument + 1); }
             break;
             case CTX_IMU_CONFIG:
                 state.imu_dest = (state.imu_dest == 0x3) ? 0x0 : state.imu_dest + 0x1;
+            break;
+            case CTX_VOLUME:
+                if(state.volume < 127) { state.volume += VOL_INCR; }
+                update_volume();
             break;
         }
     } else if (direction == -1) {
         switch (state.context) {
             case CTX_KEY:
-                if(state.key > 0) state.key--;
+                if(state.key > 0) { state.key--; }
                 update_key();
             break;
             case CTX_SCALE:
-                if(state.scale > 0) state.scale--;
+                if(state.scale > 0) { state.scale--; }
                 update_scale();
             break;
             case CTX_INSTRUMENT:
-                if(state.instrument > 0) set_instrument(state.instrument - 1);
+                if(state.instrument > 0) { set_instrument(state.instrument - 1); }
             break;
             case CTX_IMU_CONFIG:
                 state.imu_dest = (state.imu_dest == 0x0) ? 0x3 : state.imu_dest - 0x1;
+            break;
+            case CTX_VOLUME:
+                if(state.volume > VOL_MIN) { state.volume -= VOL_INCR; }
+                update_volume();
             break;
         }
     }
@@ -254,8 +280,11 @@ void button_onchange(button_t *button_p) {
             if (state.context == CTX_INSTRUMENT + 1) { state.context = CTX_KEY; }
         break;
         case CTX_IMU_CONFIG:
+            state.context = CTX_VOLUME;
+            state.low_batt=true;// TODO Test
+        break;
+        case CTX_VOLUME:
             state.context = CTX_KEY;
-            state.low_batt=true;//Test
         break;
     }
 #if defined (USE_DISPLAY)
@@ -324,10 +353,12 @@ int main() {
     // Initialize state
     state.context = CTX_KEY;
     state.key = 48; // C3
-    state.imu_dest = 0x3; // Both effects are active
     update_key();
+    state.volume = 127; // Max
+    update_volume();
     update_scale();
     set_instrument(0);
+    state.imu_dest = 0x3; // Both effects are active
 
     // Launch the routine on the second core
     multicore_launch_core1(core1_main);
@@ -383,16 +414,15 @@ int main() {
     // Non-time-critical routine, run by timer
     battery_check_init(5000, NULL, (void*)battery_low_detected);
 
-    static uint8_t throttle;
     while (true) { // Main loop
         mpr121_task();
+    static uint8_t throttle;
 #if defined (USE_GYRO)
-        if(throttle++ % 10 == 0) { // Limit the call rate
+        if(++throttle % 10 == 0) { // Limit the call rate
             imu_task(&imu_data);
             bending();
-        } 
+        }
 #endif
         // tud_task(); // tinyusb device task
-        // i2s_audio_task();
     }
 }

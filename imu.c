@@ -53,19 +53,3 @@ void imu_task(Imu_data * data){
     data->deviation_y = (((pitch + 90.0f) * 2.0f / 180.0f) - 1.0f);
     data->acceleration = fclamp(accel_total, 0.0f, 1.0f);
 }
-
-/*
-    // By 'pitch' here we mean the tilt angle, not the frequency of a note
-    float pitch = gyro->x * gyro_multiplier;
-    // Calculate the Euclidean norm of the vector (x, y, z)
-    float accel_total = sqrt((accel->x*accel->x)+(accel->y*accel->y)+(accel->z*accel->z));
-    float pitch_accel = asin((float)accel->y/accel_total) * RAD_TO_DEG;                                       
-    pitch = (pitch + pitch_accel) / 2.0f;
-    // Remove the gravitational pull from the calculations
-    accel_total -= GRAVITY_CONSTANT;
-    // Normalize and clamp outputs
-    accel_total = (fabs(accel_total) + TAP_SENSITIVITY) / TAP_SENSITIVITY -1.0f;
-    float deviation = (((pitch + 90.0f) * 2.0f / 180.0f) - 1.0f);
-    data->acceleration = fclamp(accel_total, 0.0f, 1.0f);
-    data->deviation = fclamp(deviation, -1.0f, 1.0f);
-*/

@@ -80,4 +80,7 @@
 #define I2S_LRCK_DESCRIPTION        "I2S LRCK" // Must be BCK+1
 // The third required connection is GPIO 1 -> I2S LRCK (BCK+1)
 
+#define VOL_MIN                     15 // Lowest output volume
+#define VOL_INCR                    16 // Volume change amount on a 0-127 scale
+
 #endif /* CONFIG_H_ */

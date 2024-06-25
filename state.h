@@ -15,6 +15,7 @@ typedef struct {
                                     // according to its current context
     uint8_t parameter;
     uint8_t argument;
+    uint8_t volume;
 
     uint8_t imu_dest;               // Determines what the IMU is controlling:
                                     // 0x0 - no effect
@@ -29,5 +30,6 @@ typedef struct {
 #define CTX_SCALE       1
 #define CTX_INSTRUMENT  2
 #define CTX_IMU_CONFIG  3
+#define CTX_VOLUME      4
 
 #endif

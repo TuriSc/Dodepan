@@ -74,7 +74,7 @@ const uint8_t dodepan_program[] = {
      64, // OSC_2_PITCH - +0, keep tuning sharp
      80, // MIXER_OSC_MIX - Favor OSC_2
         
-     70, // FILTER_CUTOFF - Emphasize midrange frequencies
+     90, // FILTER_CUTOFF - Emphasize midrange frequencies
      90, // FILTER_RESO - Add a gentle pinch to the sound
      60, // FILTER_EG_AMT - Swell lightly, like a handpan
      127, // FILTER_KEY_TRK - Max key tracking
