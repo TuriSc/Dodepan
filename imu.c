@@ -36,20 +36,23 @@ void imu_task(Imu_data * data){
     mpu6050_vectorf_t *accel = mpu6050_get_accelerometer(&mpu6050);
     mpu6050_vectorf_t *gyro = mpu6050_get_gyroscope(&mpu6050);
 
-    float roll = gyro->x * gyro_multiplier;
-    // By 'pitch' here we mean the tilt angle, not the frequency of a note
-    float pitch = gyro->y * gyro_multiplier;
     // Calculate the Euclidean norm of the vector (x, y, z)
-    float accel_total = sqrt((accel->x*accel->x)+(accel->y*accel->y)+(accel->z*accel->z));
-    float roll_accel = asin((float)accel->y/accel_total) * RAD_TO_DEG;        
-    float pitch_accel = asin((float)accel->x/accel_total) * RAD_TO_DEG;                               
-    roll = (roll + roll_accel) / 2.0f;
-    pitch = (pitch + pitch_accel) / 2.0f;
+    float acceleration = sqrt((accel->x*accel->x)+(accel->y*accel->y)+(accel->z*accel->z));
     // Remove the gravitational pull from the calculations
-    accel_total -= GRAVITY_CONSTANT;
+    float accel_total = acceleration - GRAVITY_CONSTANT;
     // Normalize and clamp outputs
     accel_total = (fabs(accel_total) + TAP_SENSITIVITY) / TAP_SENSITIVITY -1.0f;
-    data->deviation_x = (((roll + 90.0f) * 2.0f / 180.0f) - 1.0f);
-    data->deviation_y = (((pitch + 90.0f) * 2.0f / 180.0f) - 1.0f);
-    data->acceleration = fclamp(accel_total, 0.0f, 1.0f);
+
+    float roll = (gyro->x * gyro_multiplier) + asin((float)accel->x/acceleration) * RAD_TO_DEG;      
+    // By 'pitch' here we mean the tilt angle, not the frequency of a note
+    float pitch = (gyro->y * gyro_multiplier) + asin((float)accel->y/acceleration) * RAD_TO_DEG;
+
+    // Map [-90.0, +90.0] to [0, 16383]
+    data->deviation_x = (uint16_t)((roll + 90.0) / 180.0 * 16383.0) + 1;
+    // Map [-90.0, +90.0] to [0, 127]
+    data->deviation_y = (uint8_t)((pitch + 90.0) / 180.0 * 127.0) + 1;
+
+    accel_total = fclamp(accel_total, -2.0f, 2.0f);
+    // Map [-2.0, +2.0] to [0, 127]
+    data->acceleration = (uint8_t)((accel_total + 2.0) / 4.0 * 127.0) + 1;
 }

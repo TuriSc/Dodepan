@@ -120,11 +120,9 @@ void set_instrument(uint8_t instr) {
 // }
 
 void trigger_note_on(uint8_t note) {
-    // Set the decay according to accelerometer data.
-    // The range of decay is 0-64, but here we're clamping it to 32-48
-    int8_t decay = 32 + (16 * imu_data.acceleration);
+    // Set the velocity according to accelerometer data.
     // The range of velocity is 0-127, but here we're clamping it to 64-127
-    uint8_t velocity = 64 + (63 * imu_data.acceleration);
+    uint8_t velocity = 64 + imu_data.acceleration;
 
     g_synth.note_on(note, velocity);
     // tudi_midi_write24(0, 0x90, note, velocity);
@@ -139,21 +137,16 @@ void bending() {
     // Use the IMU to alter a parameter according to device tilting.
     // The range of the deviation is between -0.5 and +0.5.
     if(state.imu_dest & 0x02) {
-        g_synth.control_change(FILTER_CUTOFF, (uint8_t)(64.0f + (imu_data.deviation_y + 0.5f) * 63.0f));
+        g_synth.control_change(FILTER_CUTOFF, imu_data.deviation_y);
     }
-    int32_t int_y = (int32_t)(imu_data.deviation_x * 32768.0);  // 32768 is 2^15
-    uint16_t bend = (uint16_t)(((int_y + 0x4000) * 0x3FFF) >> 15);
-    // We're keeping floating point operations to a minimum, since the Pico
-    // does not have an FPU. An equivalent arithmetic operation would have been:
-    // uint16_t bend = (uint16_t)((imu_data.deviation_y + 0.5f) * 16383.0f);
 
     // Split the bytes
-    uint8_t bend_lsb = bend & 0x7F;
-    uint8_t bend_msb = (bend >> 7) & 0x7F;
+    uint8_t bending_lsb = imu_data.deviation_x & 0x7F;
+    uint8_t bending_msb = (imu_data.deviation_x >> 7) & 0x7F;
 
     // Send the instruction to the synth
     if(state.imu_dest & 0x01) {
-        g_synth.pitch_bend(bend_lsb, bend_msb);
+        g_synth.pitch_bend(bending_lsb, bending_msb);
     }
 
     // Prepare the Midi message
@@ -162,7 +155,7 @@ void bending() {
     // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
     // with 8192 (0x2000) being the center value.
     // Send the Midi message
-    // tudi_midi_write24 (0, 0xE0, bend_lsb, bend_msb);
+    // tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
 }
 
 static inline void i2s_audio_task(void) {
@@ -392,9 +385,9 @@ int main() {
 #endif
 
     // Falloff values in case the IMU is disabled
-    imu_data.acceleration = 1.0f;
-    imu_data.deviation_x = 0.0f;
-    imu_data.deviation_y = 0.0f;
+    imu_data.acceleration = 127;    // Max value
+    imu_data.deviation_x = 0x2000;  // Center value
+    imu_data.deviation_y = 64;      // Center value
 
     // board_init(); // Midi
     // tusb_init(); // tinyusb
