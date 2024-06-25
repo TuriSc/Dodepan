@@ -5,15 +5,17 @@
 #include "hardware/i2c.h"
 #include "config.h"
 #include "ssd1306.h"        // https://github.com/daschr/pico-ssd1306
+#include "state.h"
+
+// Include assets
+#include "display_fonts.h"
+#include "display_strings.h"
 #include "intro_frames.h"
 #include "icon_off.h"
 #include "icon_on_x.h"
 #include "icon_on_y.h"
 #include "icon_on_x_y.h"
 #include "icon_low_batt.h"
-#include "display_fonts.h"
-#include "display_strings.h"
-#include "state.h"
 
 void display_init(ssd1306_t *p) {
     p->external_vcc=false;
@@ -30,6 +32,7 @@ void intro_animation(ssd1306_t *p) {
 }
 
 #define OFFSET_X    32
+#define CHAR_W      7 // Includes spacing
 void display_draw(ssd1306_t *p, state_t *st) {
     ssd1306_clear(p);
     switch(st->context) {
@@ -40,8 +43,10 @@ void display_draw(ssd1306_t *p, state_t *st) {
             ssd1306_draw_string_with_font(p, 0, 4, 1, key_font, note_names[st->tonic]);
             if(st->is_alteration) { ssd1306_draw_string_with_font(p, 15, 0, 1, diesis_font, diesis); }
             ssd1306_draw_string_with_font(p, 15, 16, 1, octave_font, octave_names[st->octave]);
-            ssd1306_draw_string(p, OFFSET_X, 19, 1, scale_names[st->scale]);
-            ssd1306_draw_string(p, OFFSET_X, 0, 1, instrument_names[st->instrument]);
+            ssd1306_draw_string_with_font(p, OFFSET_X, 21, 1, spaced_font, scale_names[st->scale]);
+            ssd1306_draw_string_with_font(p, OFFSET_X, 4, 1, spaced_font, instrument_names[st->instrument]);
+            uint8_t scale_name_width = strlen(scale_names[st->scale]);
+            uint8_t instrument_name_width = strlen(instrument_names[st->instrument]);
             
             switch(st->context) {
                 case CTX_KEY:
@@ -49,12 +54,12 @@ void display_draw(ssd1306_t *p, state_t *st) {
                     ssd1306_draw_line(p, 0, 31, 25, 31);
                 break;
                 case CTX_SCALE:
-                    ssd1306_draw_line(p, OFFSET_X, 30, 120, 30);
-                    ssd1306_draw_line(p, OFFSET_X, 31, 120, 31);
+                    ssd1306_draw_line(p, OFFSET_X, 30, OFFSET_X+CHAR_W*scale_name_width, 30);
+                    ssd1306_draw_line(p, OFFSET_X, 31, OFFSET_X+CHAR_W*scale_name_width, 31);
                 break;
                 case CTX_INSTRUMENT:
-                    ssd1306_draw_line(p, OFFSET_X, 11, 120, 11);
-                    ssd1306_draw_line(p, OFFSET_X, 12, 120, 12);
+                    ssd1306_draw_line(p, OFFSET_X, 13, OFFSET_X+CHAR_W*instrument_name_width, 13);
+                    ssd1306_draw_line(p, OFFSET_X, 14, OFFSET_X+CHAR_W*instrument_name_width, 14);
                 break;
             }
         }
