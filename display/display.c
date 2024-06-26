@@ -10,7 +10,7 @@
 // Include assets
 #include "display_fonts.h"
 #include "display_strings.h"
-#include "intro_frames.h"
+#include "intro.h"
 #include "icon_off.h"
 #include "icon_on_x.h"
 #include "icon_on_y.h"
@@ -20,13 +20,16 @@
 void display_init(ssd1306_t *p) {
     p->external_vcc=false;
     ssd1306_init(p, SSD1306_WIDTH, SSD1306_HEIGHT, SSD1306_ADDRESS, SSD1306_I2C_PORT);
+    ssd1306_clear(p);
+    ssd1306_show(p);
 }
 
+#define ICON_MARGIN_X ((SSD1306_WIDTH / 2) - (32 / 2))
 void intro_animation(ssd1306_t *p) {
-    for(uint8_t current_frame=0;current_frame<16;current_frame++) {
-        ssd1306_bmp_show_image(p, intro_frames[current_frame], intro_frames_size);
+    for(uint8_t current_frame=0; current_frame < INTRO_FRAMES_NUM; current_frame++) {
+        ssd1306_bmp_show_image_with_offset(p, intro_frames[current_frame], INTRO_FRAME_SIZE, ICON_MARGIN_X, 0);
         ssd1306_show(p);
-        sleep_ms(82);
+        sleep_ms(42); // About 24fps
         ssd1306_clear(p);
     }
 }

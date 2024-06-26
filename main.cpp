@@ -337,6 +337,26 @@ int main() {
 
     bi_decl_all();
 
+    // Initialize display and IMU (sharing an I²C bus)
+#if defined (USE_DISPLAY) || defined (USE_GYRO)
+    gpio_init(SSD1306_SDA_PIN);
+    gpio_init(SSD1306_SCL_PIN);
+    gpio_set_function(SSD1306_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(SSD1306_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(SSD1306_SDA_PIN);
+    gpio_pull_up(SSD1306_SCL_PIN);
+
+    i2c_init(SSD1306_I2C_PORT, SSD1306_I2C_FREQ);
+#endif
+
+#if defined (USE_DISPLAY)
+    display_init(&display);
+#endif
+
+#if defined (USE_GYRO)
+    imu_init(); // MPU6050
+#endif
+
     // Start the audio engine.
     sound_i2s_init(&sound_config);
 
@@ -363,27 +383,6 @@ int main() {
     rotary_encoder_t *encoder = create_encoder(ENCODER_DT_PIN, ENCODER_CLK_PIN, encoder_onchange);
     button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
 
-    // Initialize display and IMU (sharing an I²C bus)
-#if defined (USE_DISPLAY) || defined (USE_GYRO)
-    gpio_init(SSD1306_SDA_PIN);
-    gpio_init(SSD1306_SCL_PIN);
-    gpio_set_function(SSD1306_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(SSD1306_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(SSD1306_SDA_PIN);
-    gpio_pull_up(SSD1306_SCL_PIN);
-
-    i2c_init(SSD1306_I2C_PORT, SSD1306_I2C_FREQ);
-#endif
-
-#if defined (USE_DISPLAY)
-    display_init(&display);
-    display_draw(&display, &state);
-#endif
-
-#if defined (USE_GYRO)
-    imu_init(); // MPU6050
-#endif
-
     // Falloff values in case the IMU is disabled
     imu_data.acceleration = 127;    // Max value
     imu_data.deviation_x = 0x2000;  // Center value
@@ -398,14 +397,17 @@ int main() {
     gpio_put(PICO_DEFAULT_LED_PIN, 1);
     power_on_alarm_id = add_alarm_in_ms(500, power_on_complete, NULL, true);
 
-    // Show a short intro animation. This will distract the user
-    // while the hardware is calibrating
-    // intro_animation(); // Blocking
-
     // Initialize the ADC, used for voltage sensing
     adc_init();
     // Non-time-critical routine, run by timer
     battery_check_init(5000, NULL, (void*)battery_low_detected);
+
+#if defined (USE_DISPLAY)
+    // Show a short intro animation. This will distract the user
+    // while the hardware is calibrating
+    intro_animation(&display); // Blocking
+    display_draw(&display, &state);
+#endif
 
     while (true) { // Main loop
         mpr121_task();
