@@ -91,9 +91,11 @@ void display_draw(ssd1306_t *p, state_t *st) {
             uint8_t width = 128 / increments - gap;
             // for(uint8_t i=VOL_MIN; i <= 127; i += VOL_INCR){
             for (uint8_t i = 0; i < increments; i++) {
+                uint8_t x = i * width + i * gap;
                 if(st->volume >= VOL_MIN + i * VOL_INCR) {
-                    uint8_t x = i * width + i * gap;
-                    ssd1306_draw_square(p, x, 4, width, 24);
+                    ssd1306_draw_square(p, x, 8, width, 16);
+                } else {
+                    ssd1306_draw_empty_square(p, x, 8, width, 16);
                 }
             }
         }
