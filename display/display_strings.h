@@ -20,17 +20,17 @@ const char *diesis = "#";
 
 const char *scale_names[] = {
     "Major",
-    "Natural Minor",
-    "Harmonic Minor",
+    "Natural min",
+    "Harmonic min",
     "Dorian",
     "Lydian",
     "Mixolydian",
     "Locrian",
     "Phrygian",
-    "Phrygian Domin.",
-    "Pentatonic Maj.",
-    "Pentatonic Min.",
-    "Pentatonic Blues",
+    "Phrygian Dom",
+    "Pentatonic M",
+    "Pentatonic m",
+    "Penta. Blues",
     "Arabian",
     "Oriental",
     "Japanese",
@@ -59,7 +59,7 @@ const char *instrument_names[] = {
     "Pad",
     "Synth Bass",
     "PWM Lead",
-    "Electric Piano",
+    "Elec. Piano",
     "Square Tone",
     };
 

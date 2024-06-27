@@ -44,14 +44,27 @@ void display_draw(ssd1306_t *p, state_t *st) {
         case CTX_SCALE:
         case CTX_INSTRUMENT:
         {
+            // Key
             ssd1306_draw_string_with_font(p, 0, 4, 1, key_font, note_names[st->tonic]);
             if(st->is_alteration) { ssd1306_draw_string_with_font(p, 15, 0, 1, diesis_font, diesis); }
             ssd1306_draw_string_with_font(p, 15, 16, 1, octave_font, octave_names[st->octave]);
+
+            // Scale and instrument
             ssd1306_draw_string_with_font(p, OFFSET_X, 21, 1, spaced_font, scale_names[st->scale]);
             ssd1306_draw_string_with_font(p, OFFSET_X, 4, 1, spaced_font, instrument_names[st->instrument]);
             uint8_t scale_name_width = strlen(scale_names[st->scale]);
             uint8_t instrument_name_width = strlen(instrument_names[st->instrument]);
+
+            // Overflow menu. Not interactive, but it's there for good UX,
+            // letting users know that there are more pages
+            ssd1306_draw_line(p, 122, 0, 127, 0);
+            ssd1306_draw_line(p, 122, 1, 127, 1);
+            ssd1306_draw_line(p, 122, 3, 127, 3);
+            ssd1306_draw_line(p, 122, 4, 127, 4);
+            ssd1306_draw_line(p, 122, 6, 127, 6);
+            ssd1306_draw_line(p, 122, 7, 127, 7);
             
+            // Draw underline
             switch(st->context) {
                 case CTX_KEY:
                     ssd1306_draw_line(p, 0, 30, 25, 30);
@@ -106,8 +119,8 @@ void display_draw(ssd1306_t *p, state_t *st) {
 
     if(st->low_batt) {
         // Clear an outline around the icon to avoid overlaps
-        ssd1306_clear_square(p, 119, 8, 9, 16);
-        ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 121, 9);
+        ssd1306_clear_square(p, 119, 17, 9, 15);
+        ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 121, 18);
     }
 
     ssd1306_show(p);
