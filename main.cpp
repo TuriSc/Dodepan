@@ -121,8 +121,8 @@ void set_instrument(uint8_t instr) {
 
 void trigger_note_on(uint8_t note) {
     // Set the velocity according to accelerometer data.
-    // The range of velocity is 0-127, but here we're clamping it to 64-127
-    uint8_t velocity = 64 + imu_data.acceleration;
+    // The range of velocity is 0-127, but here we're clamping it to 63-127
+    uint8_t velocity = 63 + imu_data.acceleration;
 
     g_synth.note_on(note, velocity);
     // tudi_midi_write24(0, 0x90, note, velocity);
@@ -137,7 +137,7 @@ void bending() {
     // Use the IMU to alter a parameter according to device tilting.
     // The range of the deviation is between -0.5 and +0.5.
     if(state.imu_dest & 0x02) {
-        g_synth.control_change(FILTER_CUTOFF, imu_data.deviation_y);
+        //g_synth.control_change(FILTER_CUTOFF, imu_data.deviation_y); // TODO disabled for testing
     }
 
     // Split the bytes
@@ -402,7 +402,7 @@ int main() {
     button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
 
     // Falloff values in case the IMU is disabled
-    imu_data.acceleration = 127;    // Max value
+    imu_data.acceleration = 64;    // Max value
     imu_data.deviation_x = 0x2000;  // Center value
     imu_data.deviation_y = 64;      // Center value
 

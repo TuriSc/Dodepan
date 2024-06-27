@@ -53,6 +53,6 @@ void imu_task(Imu_data * data){
     data->deviation_y = (uint8_t)((pitch + 90.0) / 180.0 * 127.0) + 1;
 
     accel_total = fclamp(accel_total, -2.0f, 2.0f);
-    // Map [-2.0, +2.0] to [0, 127]
-    data->acceleration = (uint8_t)((accel_total + 2.0) / 4.0 * 127.0) + 1;
+    // Map [-2.0, +2.0] to [0, 64]
+    data->acceleration = (uint8_t)((accel_total + 2.0) / 4.0 * 64.0) + 1;
 }
