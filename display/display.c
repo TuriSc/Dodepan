@@ -25,13 +25,14 @@ void display_init(ssd1306_t *p) {
 }
 
 #define ICON_MARGIN_X ((SSD1306_WIDTH / 2) - (32 / 2))
-void intro_animation(ssd1306_t *p) {
+void intro_animation(ssd1306_t *p, void (*callback)(void)) {
     for(uint8_t current_frame=0; current_frame < INTRO_FRAMES_NUM; current_frame++) {
         ssd1306_bmp_show_image_with_offset(p, intro_frames[current_frame], INTRO_FRAME_SIZE, ICON_MARGIN_X, 0);
         ssd1306_show(p);
-        sleep_ms(42); // About 24fps
+        busy_wait_ms(42); // About 24fps
         ssd1306_clear(p);
     }
+    callback();
 }
 
 #define OFFSET_X    32

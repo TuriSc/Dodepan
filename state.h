@@ -26,10 +26,11 @@ typedef struct {
     bool low_batt;                  // Low battery detected
 } state_t;
 
-#define CTX_KEY         0
-#define CTX_SCALE       1
-#define CTX_INSTRUMENT  2
-#define CTX_IMU_CONFIG  3
-#define CTX_VOLUME      4
+#define CTX_INIT        0
+#define CTX_KEY         1
+#define CTX_SCALE       2
+#define CTX_INSTRUMENT  3
+#define CTX_IMU_CONFIG  4
+#define CTX_VOLUME      5
 
 #endif

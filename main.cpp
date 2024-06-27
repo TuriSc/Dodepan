@@ -192,7 +192,9 @@ int64_t on_long_press(alarm_id_t, void *) {
             state.context = CTX_VOLUME;
         break;
         case CTX_VOLUME:
-            // Do nothing
+        case CTX_INIT:
+        default:
+            ; // Do nothing
         break;
      }
 
@@ -232,6 +234,10 @@ void encoder_onchange(rotary_encoder_t *encoder) {
                 if(state.volume < 127) { state.volume += VOL_INCR; }
                 update_volume();
             break;
+            case CTX_INIT:
+            default:
+                ; // Do nothing
+            break;
         }
     } else if (direction == -1) {
         switch (state.context) {
@@ -253,11 +259,19 @@ void encoder_onchange(rotary_encoder_t *encoder) {
                 if(state.volume > VOL_MIN) { state.volume -= VOL_INCR; }
                 update_volume();
             break;
+            case CTX_INIT:
+            default:
+                ; // Do nothing
+            break;
         }
     }
 #if defined (USE_DISPLAY)
     display_draw(&display, &state);
 #endif
+}
+
+void intro_complete() {
+    state.context = CTX_KEY;
 }
 
 void button_onchange(button_t *button_p) {
@@ -278,6 +292,10 @@ void button_onchange(button_t *button_p) {
         break;
         case CTX_VOLUME:
             state.context = CTX_KEY;
+        break;
+        case CTX_INIT:
+        default:
+            ; // Do nothing
         break;
     }
 #if defined (USE_DISPLAY)
@@ -364,7 +382,7 @@ int main() {
     g_synth.initialize();
 
     // Initialize state
-    state.context = CTX_KEY;
+    state.context = CTX_INIT;
     state.key = 48; // C3
     update_key();
     state.volume = 127; // Max
@@ -405,8 +423,12 @@ int main() {
 #if defined (USE_DISPLAY)
     // Show a short intro animation. This will distract the user
     // while the hardware is calibrating
-    intro_animation(&display); // Blocking
+    intro_animation(&display, intro_complete);
     display_draw(&display, &state);
+#else
+    // Since there's no intro animation without a display,
+    // let's trigger the new state manually
+    state.context = CTX_KEY;
 #endif
 
     while (true) { // Main loop
