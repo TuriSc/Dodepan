@@ -6,8 +6,9 @@
 extern "C" {
 #endif
 
-typedef struct {            // Accelerometer/gyroscope data, with fallback.
-    uint8_t acceleration;     // Also used to calculate velocity for Midi.
+// Accelerometer/gyroscope data structure for Dodepan
+typedef struct {
+    uint8_t acceleration; // Also used to calculate velocity for Midi
     uint16_t deviation_x;
     uint8_t deviation_y;
 } Imu_data;

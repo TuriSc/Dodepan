@@ -44,13 +44,14 @@
 #define MPU6050_SCL_DESCRIPTION     "MPU6050 SCL"
 
 #define MPU6050_ADDRESS             0x68
-#define TAP_SENSITIVITY             5.0f // Lower values trigger a higher velocity
-#define GRAVITY_CONSTANT            9.80665f // Please do not modify the gravity of the earth!
-#define RAD_TO_DEG                  57.295779513f // = 1 / (PI / 180)
+#define MPU6050_SWAP_X_Y            true
 
 #define PLUS " + "
 #define SSD1306_MPU6050_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS MPU6050_SDA_DESCRIPTION
 #define SSD1306_MPU6050_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION PLUS MPU6050_SCL_DESCRIPTION
+
+#define VELOCITY_MULTIPLIER         8 // Higher values yield higher velocity, but
+                                      // lower the dynamic range.
 
 /* MPR121 */
 #define MPR121_I2C_PORT             i2c0
@@ -66,7 +67,7 @@
 #define MPR121_RELEASE_THRESHOLD    6
 
 /* Audio and synth */
-#define PRA32_U_MIDI_CH                       0  // 0-based
+#define PRA32_U_MIDI_CH             0  // 0-based
 
 #define AUDIO_BUFFER_LENGTH         64
 #define SOUND_OUTPUT_FREQUENCY      48000
@@ -82,5 +83,8 @@
 
 #define VOL_MIN                     15 // Lowest output volume
 #define VOL_INCR                    16 // Volume change amount on a 0-127 scale
+
+#define LPF_MIN                     64 // Lowest filter cutoff frequency on a 0-127 scale.
+                                       // Affects the Dodepan preset only.
 
 #endif /* CONFIG_H_ */
