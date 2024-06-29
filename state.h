@@ -13,8 +13,6 @@ typedef struct {
     uint8_t instrument;
     uint8_t context;                // The encoder affects different parameters
                                     // according to its current context
-    uint8_t parameter;
-    uint8_t argument;
     uint8_t volume;
 
     uint8_t imu_dest;               // Determines what the IMU is controlling:

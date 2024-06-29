@@ -12,6 +12,7 @@ typedef bool boolean;
 typedef uint8_t byte;
 #include "hardware/gpio.h"
 #include "hardware/adc.h"   // Used for low battery detection
+#include "hardware/flash.h"
 #include "pico/binary_info.h"
 #include "pico/multicore.h"
 #include "sound_i2s.h"
@@ -70,16 +71,17 @@ uint8_t get_scale_size(uint8_t s) {
 }
 
 void update_key() {
-    uint8_t tonic = state.key % 12;
-    state.tonic = tonic;
+    g_synth.all_notes_off();
+    state.tonic = state.key % 12;
     state.octave = state.key / 12;  // C3 is in octave 5 in this system because
                                     // octave -1 is the first element
     // Map key indices to alterations
     static bool key_to_alteration_map[12] = {0,1,0,1,0,0,1,0,1,0,1,0};
-    state.is_alteration = (key_to_alteration_map[tonic] ? 1 : 0);
+    state.is_alteration = (key_to_alteration_map[state.tonic] ? 1 : 0);
 }
 
 void update_scale() {
+    g_synth.all_notes_off();
     uint8_t scale_size = get_scale_size(state.scale);
     uint8_t j = 0;
     uint8_t octave_shift = 0;
@@ -114,6 +116,47 @@ void set_instrument(uint8_t instr) {
     state.instrument = instr;
 }
 
+void read_flash_data(){ // Only called at startup
+    // Read address is different than write address
+    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
+
+    // Validation
+    uint8_t magic[MAGIC_NUMBER_LENGTH] = MAGIC_NUMBER;
+    bool invalid_data = false;
+    for(uint8_t i=0; i<MAGIC_NUMBER_LENGTH; i++){
+        if(stored_data[i] != magic[i]){ return; } // Invalid data
+    }
+    
+    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99) || // Validate key
+       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15) || // Validate scale
+       (stored_data[MAGIC_NUMBER_LENGTH + 2] > PRESET_PROGRAM_NUMBER_MAX + 1) || // Validate instrument // TODO check last
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03) ||  // Validate IMU configuration
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 127) // Validate volume
+    ) { return; } // Invalid data
+
+    // Data is valid and can be loaded safely
+    state.key =         stored_data[MAGIC_NUMBER_LENGTH + 0];
+    state.scale =       stored_data[MAGIC_NUMBER_LENGTH + 1];
+    state.instrument =  stored_data[MAGIC_NUMBER_LENGTH + 2];
+    state.imu_dest =    stored_data[MAGIC_NUMBER_LENGTH + 3];
+    state.volume =      stored_data[MAGIC_NUMBER_LENGTH + 4];
+}
+
+void write_flash_data() {
+    uint8_t flash_buffer[FLASH_PAGE_SIZE] = MAGIC_NUMBER; // Initialize the buffer with a signature
+
+    flash_buffer[MAGIC_NUMBER_LENGTH + 0] = state.key;
+    flash_buffer[MAGIC_NUMBER_LENGTH + 1] = state.scale;
+    flash_buffer[MAGIC_NUMBER_LENGTH + 2] = state.instrument;
+    flash_buffer[MAGIC_NUMBER_LENGTH + 3] = state.imu_dest;
+    flash_buffer[MAGIC_NUMBER_LENGTH + 4] = state.volume;
+
+    uint32_t ints_id = save_and_disable_interrupts();
+	flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE); // Required for flash_range_program to work
+	flash_range_program(FLASH_TARGET_OFFSET, flash_buffer, FLASH_PAGE_SIZE);
+	restore_interrupts (ints_id);
+}
+
 // static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
 //     uint8_t msg[3] = { b1, b2, b3 };
 //     return tud_midi_stream_write(jack_id, msg, 3);
@@ -136,7 +179,7 @@ void trigger_note_off(uint8_t note) {
 // Use the IMU to alter parameters according to device tilting
 void tilt_process() {
     if(state.imu_dest & 0x02) {
-        g_synth.control_change(FILTER_CUTOFF, imu_data.deviation_y); // TODO disabled for testing
+        g_synth.control_change(FILTER_CUTOFF, imu_data.deviation_y);
     }
 
     // Split the bytes
@@ -173,12 +216,16 @@ static inline void i2s_audio_task(void) {
     }
 }
 
-/* I/O functions */
-
 int64_t power_on_complete(alarm_id_t, void *) {
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
     return 0;
 }
+
+void intro_complete() {
+    state.context = CTX_KEY;
+}
+
+/* I/O functions */
 
 int64_t on_long_press(alarm_id_t, void *) {
      switch(state.context) {
@@ -269,10 +316,6 @@ void encoder_onchange(rotary_encoder_t *encoder) {
 #endif
 }
 
-void intro_complete() {
-    state.context = CTX_KEY;
-}
-
 void button_onchange(button_t *button_p) {
     button_t *button = (button_t*)button_p;
     if (long_press_alarm_id) cancel_alarm(long_press_alarm_id);
@@ -288,6 +331,7 @@ void button_onchange(button_t *button_p) {
         case CTX_IMU_CONFIG:
             state.context = CTX_VOLUME;
             state.low_batt=true;// TODO Test
+            write_flash_data(); // TODO Test
         break;
         case CTX_VOLUME:
             state.context = CTX_KEY;
@@ -307,8 +351,8 @@ void battery_low_detected() {
     battery_check_stop(); // Stop the timer
 }
 
+// Declare binary information
 void bi_decl_all() {
-    // Declare some binary information
     bi_decl(bi_program_name(PROGRAM_NAME));
     bi_decl(bi_program_description(PROGRAM_DESCRIPTION));
     bi_decl(bi_program_version_string(PROGRAM_VERSION));
@@ -335,6 +379,7 @@ void bi_decl_all() {
     I2S_CLOCK_PIN_BASE+1, I2S_LRCK_DESCRIPTION));
 }
 
+// Secondary core task
 void core1_main() {
     while(true) {
         g_synth.secondary_core_process();
@@ -343,8 +388,8 @@ void core1_main() {
 }
 
 int main() {
-    // Adjust the clock speed to be an even multiplier of the audio
-    // sampling frequency
+    // Adjust the clock speed to be an even multiplier
+    // of the audio sampling frequency
     if (SOUND_OUTPUT_FREQUENCY % 11025 == 0) { // For 22.05, 44.1, 88.2 kHz
         set_sys_clock_khz(135600, false);
     } else if (SOUND_OUTPUT_FREQUENCY % 8000 == 0) { // For 8, 16, 32, 48, 96, 192 kHz
@@ -383,12 +428,19 @@ int main() {
     // Initialize state
     state.context = CTX_INIT;
     state.key = 48; // C3
+    state.scale = 0; // Major
+    state.volume = 127; // Max value
+    state.imu_dest = 0x3; // Both effects are active
+    state.instrument = 0; // Dodepan custom preset
+
+    // Attempt to load previous settings, if stored on flash
+    read_flash_data();
+
     update_key();
-    state.volume = 127; // Max
     update_volume();
     update_scale();
-    set_instrument(0);
-    state.imu_dest = 0x3; // Both effects are active
+    set_instrument(state.instrument);
+
 
     // Launch the routine on the second core
     multicore_launch_core1(core1_main);

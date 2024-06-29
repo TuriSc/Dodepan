@@ -5,7 +5,6 @@
 #include "MPU6050.h"
 #include <config.h>
 #include "imu.h"
-#include <stdio.h> // TODO remove
 
 mpu6050_t mpu6050;
 

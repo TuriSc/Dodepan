@@ -41,6 +41,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         hardware_i2c
         hardware_dma
         hardware_adc
+        hardware_flash
         pico-mpr121
         pico_multicore
         sound_i2s_16bits
