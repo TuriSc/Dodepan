@@ -13,6 +13,8 @@
 #define BATT_LVL_PIN                29
 #define BATT_LVL_DESCRIPTION        "Battery sensing pin"
 
+#define ENCODER_USE_PULLUPS         true // Set to true if using a bare rotary encoder like EC11.
+                                          // Set to false if you have a breakout board with external pullup resistors.
 #define ENCODER_CLK_PIN             19
 #define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
 #define ENCODER_DT_PIN              20
@@ -92,5 +94,5 @@
 #define FLASH_TARGET_OFFSET         (FLASH_SECTOR_SIZE * 511)
 #define MAGIC_NUMBER                {0x44, 0x4F, 0x44, 0x45} // 'DODE' - δώδε means 'twelve' in ancient Greek
 #define MAGIC_NUMBER_LENGTH         4
-#define FLASH_WRITE_DELAY_S         2  // To minimize flash operations, delay writing by this amount of seconds
+#define FLASH_WRITE_DELAY_S         10  // To minimize flash operations, delay writing by this amount of seconds
 #endif /* CONFIG_H_ */

@@ -460,6 +460,11 @@ int main() {
     mpr121_i2c_init();
 
     // Initialize the rotary encoder and switch
+#if defined (ENCODER_USE_PULLUPS)
+    gpio_pull_up(ENCODER_DT_PIN);
+    gpio_pull_up(ENCODER_CLK_PIN);
+    gpio_pull_up(ENCODER_SWITCH_PIN);
+#endif
     rotary_encoder_t *encoder = create_encoder(ENCODER_DT_PIN, ENCODER_CLK_PIN, encoder_onchange);
     button_t *button = create_button(ENCODER_SWITCH_PIN, button_onchange);
 
