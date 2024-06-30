@@ -62,12 +62,6 @@ static const struct sound_i2s_config sound_config = {
     .samples_per_buffer = AUDIO_BUFFER_LENGTH,
 };
 
-void update_volume(uint8_t volume) {
-    if(volume == get_volume()) { return; } // Nothing to do
-    set_volume(volume);
-    g_synth.control_change(dodepan_program_parameters[AMP_GAIN], get_volume());
-}
-
 void update_instrument(uint8_t instr) {
     switch (instr) {
         case 0: // Load custom Dodepan preset
@@ -116,7 +110,7 @@ bool load_flash_data() { // Only called at startup
        (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15)   || // Validate scale
        (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8)    || // Validate instrument
        (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03) || // Validate IMU configuration
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 127)     // Validate volume
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 8)       // Validate volume
     ) { return false; } // Invalid data
 
     // Data is valid and can be loaded safely
@@ -124,7 +118,7 @@ bool load_flash_data() { // Only called at startup
     set_scale(          stored_data[MAGIC_NUMBER_LENGTH + 1]);
     update_instrument(  stored_data[MAGIC_NUMBER_LENGTH + 2]);
     set_imu_axes(       stored_data[MAGIC_NUMBER_LENGTH + 3]);
-    update_volume(      stored_data[MAGIC_NUMBER_LENGTH + 4]);
+    set_volume(         stored_data[MAGIC_NUMBER_LENGTH + 4]);
 
     return true;
 }
@@ -206,8 +200,10 @@ static void __not_in_flash_func(i2s_audio_task)(void) {
         last_buffer = buffer;
         for (int i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
         short sample = g_synth.process(right_buffer);
-        *buffer++ = sample;
-        *buffer++ = sample;
+        int temp = (int)sample * get_volume();
+        short output = (short)(temp >> 3);
+        *buffer++ = output;
+        *buffer++ = output;
         }
     }
 }
@@ -265,7 +261,7 @@ void encoder_up() {
             set_imu_axes_up();
         break;
         case CTX_VOLUME:
-            update_volume(get_volume_up());
+            set_volume_up();
         break;
         case CTX_INIT:
         default:
@@ -295,7 +291,7 @@ void encoder_down() {
             set_imu_axes_down();
         break;
         case CTX_VOLUME:
-            update_volume(get_volume_down());
+            set_volume_down();
         break;
         case CTX_INIT:
         default:
@@ -450,7 +446,7 @@ int main() {
         set_scale(0); // Major
         update_instrument(0); // Dodepan custom preset
         set_imu_axes(0x3); // Both effects are active
-        update_volume(127); // Max value
+        set_volume(8); // Max value
     }
 
     // Launch the routine on the second core

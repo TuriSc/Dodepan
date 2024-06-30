@@ -200,25 +200,22 @@ uint8_t get_volume() {
 void set_volume(uint8_t vol) {
     uint8_t volume = vol;
     // Clip values
-    if (volume < VOL_MIN) {
-        volume = VOL_MIN;
-    } else if (volume > 127) {
-        volume = 127;
+    if (volume < 1) {
+        volume = 1;
+    } else if (volume > 8) {
+        volume = 8;
     }
     state.volume = volume;
 }
 
-uint8_t get_volume_up() {
-    uint8_t volume = get_volume() + VOL_INCR;
-    if (volume > 127) { volume = 127; }
-    return volume;
+void set_volume_up() {
+    uint8_t volume = get_volume() + 1;
+    set_volume(volume);
 }
 
-uint8_t get_volume_down() {
-    uint8_t volume = get_volume() - VOL_INCR;
-    if (volume < VOL_MIN || volume > 127) { // Adding some wraparound protection
-        volume = VOL_MIN;
-    }
+void set_volume_down() {
+    uint8_t volume = get_volume() - 1;
+    set_volume(volume);
 }
 
 /* Low batt */

@@ -103,13 +103,13 @@ void display_draw(ssd1306_t *p) {
         case CTX_VOLUME:
         {
             // Draw the volume bars
-            uint8_t increments = 128 / VOL_INCR;
+            uint8_t increments = 9; // 0 to 8
             uint8_t gap = (128 / increments / 4);
             uint8_t width = 128 / increments - gap;
-            // for(uint8_t i=VOL_MIN; i <= 127; i += VOL_INCR){
-            for (uint8_t i = 0; i < increments; i++) {
+
+            for (uint8_t i = 1; i < increments; i++) {
                 uint8_t x = i * width + i * gap;
-                if(state->volume >= VOL_MIN + i * VOL_INCR) {
+                if(state->volume >= i) {
                     ssd1306_draw_square(p, x, 8, width, 16);
                 } else {
                     ssd1306_draw_empty_square(p, x, 8, width, 16);

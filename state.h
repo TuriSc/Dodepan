@@ -77,8 +77,8 @@ void set_alteration(uint8_t alteration);
 
 uint8_t get_volume();
 void set_volume(uint8_t volume);
-uint8_t get_volume_up();
-uint8_t get_volume_down();
+void set_volume_up();
+void set_volume_down();
 
 bool get_low_batt();
 void set_low_batt(bool low_batt);
