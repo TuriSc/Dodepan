@@ -69,7 +69,6 @@ void update_volume(uint8_t volume) {
 }
 
 void update_instrument(uint8_t instr) {
-    if(instr == get_instrument()) { return; } // Nothing to do
     switch (instr) {
         case 0: // Load custom Dodepan preset
             for (uint32_t i = 0; i < sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]); ++i) {
@@ -102,7 +101,7 @@ void trigger_note_off(uint8_t note) {
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
-void load_flash_data() { // Only called at startup
+bool load_flash_data() { // Only called at startup
     // Read address is different than write address
     const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
 
@@ -110,15 +109,15 @@ void load_flash_data() { // Only called at startup
     uint8_t magic[MAGIC_NUMBER_LENGTH] = MAGIC_NUMBER;
     bool invalid_data = false;
     for(uint8_t i=0; i<MAGIC_NUMBER_LENGTH; i++){
-        if(stored_data[i] != magic[i]){ return; } // Invalid data
+        if(stored_data[i] != magic[i]){ return false; } // Invalid data
     }
     
-    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99) || // Validate key
-       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15) || // Validate scale
-       (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8) || // Validate instrument // TODO check last
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03) ||  // Validate IMU configuration
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 127) // Validate volume
-    ) { return; } // Invalid data
+    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99)   || // Validate key
+       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15)   || // Validate scale
+       (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8)    || // Validate instrument
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03) || // Validate IMU configuration
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 127)     // Validate volume
+    ) { return false; } // Invalid data
 
     // Data is valid and can be loaded safely
     set_key(            stored_data[MAGIC_NUMBER_LENGTH + 0]);
@@ -126,9 +125,13 @@ void load_flash_data() { // Only called at startup
     update_instrument(  stored_data[MAGIC_NUMBER_LENGTH + 2]);
     set_imu_axes(       stored_data[MAGIC_NUMBER_LENGTH + 3]);
     update_volume(      stored_data[MAGIC_NUMBER_LENGTH + 4]);
+
+    return true;
 }
 
-void write_flash_data() {
+void core1_main();
+
+int64_t write_flash_data(alarm_id_t, void *) {
     // Initialize the buffer with a signature
     uint8_t flash_buffer[FLASH_PAGE_SIZE] = MAGIC_NUMBER;
 
@@ -145,13 +148,22 @@ void write_flash_data() {
         stored_data[MAGIC_NUMBER_LENGTH + 1] == flash_buffer[MAGIC_NUMBER_LENGTH + 1] &&
         stored_data[MAGIC_NUMBER_LENGTH + 2] == flash_buffer[MAGIC_NUMBER_LENGTH + 2] &&
         stored_data[MAGIC_NUMBER_LENGTH + 3] == flash_buffer[MAGIC_NUMBER_LENGTH + 3] &&
-        stored_data[MAGIC_NUMBER_LENGTH + 4] == flash_buffer[MAGIC_NUMBER_LENGTH + 4] &&) { return; }
+        stored_data[MAGIC_NUMBER_LENGTH + 4] == flash_buffer[MAGIC_NUMBER_LENGTH + 4] ) { return 0; }
+
+
+    // Stop audio and synth processes on core1
+    multicore_reset_core1();
 
     // Disable interrupts, write, and restore interrupts
     uint32_t ints_id = save_and_disable_interrupts();
 	flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE); // Required for flash_range_program to work
 	flash_range_program(FLASH_TARGET_OFFSET, flash_buffer, FLASH_PAGE_SIZE);
 	restore_interrupts (ints_id);
+
+    // Restart processes on core1
+    multicore_launch_core1(core1_main);
+
+    return 0;
 }
 
 // Use the IMU to alter parameters according to device tilting
@@ -177,7 +189,14 @@ void tilt_process() {
     // tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
 }
 
-static inline void i2s_audio_task(void) {
+/*
+static void __not_in_flash_func(wait_for_reboot)(void) {
+	__asm volatile ( " cpsid i " );
+	while ( true )  {};					// reboot should happen here when watchdog times out
+}
+*/
+static void __not_in_flash_func(i2s_audio_task)(void) {
+// static inline void i2s_audio_task(void) {
     static int16_t *last_buffer;
     int16_t *buffer = sound_i2s_get_next_buffer();
     int16_t right_buffer; // Necessary quirk for compatibility with
@@ -302,6 +321,11 @@ void encoder_onchange(rotary_encoder_t *encoder) {
     } else if (direction == -1) {
         encoder_down();
     }
+
+    // Schedule writing settings to flash.
+    // This delay is introduced to minimize write operations.
+    if (flash_write_alarm_id) cancel_alarm(flash_write_alarm_id);
+    flash_write_alarm_id = add_alarm_in_ms(FLASH_WRITE_DELAY_S * 1000, write_flash_data, NULL, true);
 }
 
 void button_onchange(button_t *button_p) {
@@ -322,7 +346,6 @@ void button_onchange(button_t *button_p) {
         break;
         case CTX_VOLUME:
             set_context(CTX_KEY);
-            write_flash_data(); // TODO Testing
         break;
         case CTX_INIT:
         default:
@@ -384,6 +407,7 @@ int main() {
         set_sys_clock_khz(147600, false);
     }
     stdio_init_all();
+    sleep_ms(2000);
 
     bi_decl_all();
 
@@ -416,15 +440,18 @@ int main() {
     // Initialize the state
     state = get_state();
     set_context(CTX_INIT);
-    set_key(48); // C3
-    set_scale(0); // Major
-    set_volume(127); // Max value
-    set_imu_axes(0x3); // Both effects are active
-    set_instrument(0); // Dodepan custom preset
     set_low_batt(false);
 
     // Attempt to load previous settings, if stored on flash
-    load_flash_data();
+    bool data_loaded = load_flash_data();
+    if(!data_loaded) {
+        // Settings not loaded, initialize state with default values
+        set_key(48); // C3
+        set_scale(0); // Major
+        update_instrument(0); // Dodepan custom preset
+        set_imu_axes(0x3); // Both effects are active
+        update_volume(127); // Max value
+    }
 
     // Launch the routine on the second core
     multicore_launch_core1(core1_main);
@@ -473,7 +500,6 @@ int main() {
         imu_task(&imu_data);
         tilt_process();
 #endif
-
         // tud_task(); // tinyusb device task
     }
 }

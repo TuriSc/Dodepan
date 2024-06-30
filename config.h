@@ -89,7 +89,8 @@
 
 /* Flash memory */
 // Reserve the last 4KB of the default 2MB flash for persistence.
-#define FLASH_TARGET_OFFSET (FLASH_SECTOR_SIZE * 511)
-#define MAGIC_NUMBER {0x44, 0x4F, 0x44, 0x45} // 'DODE' - δώδε means 'twelve' in ancient Greek
-#define MAGIC_NUMBER_LENGTH 4
+#define FLASH_TARGET_OFFSET         (FLASH_SECTOR_SIZE * 511)
+#define MAGIC_NUMBER                {0x44, 0x4F, 0x44, 0x45} // 'DODE' - δώδε means 'twelve' in ancient Greek
+#define MAGIC_NUMBER_LENGTH         4
+#define FLASH_WRITE_DELAY_S         2  // To minimize flash operations, delay writing by this amount of seconds
 #endif /* CONFIG_H_ */
