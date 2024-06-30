@@ -23,6 +23,7 @@ add_subdirectory(lib/sound_i2s)
 target_sources(${PROJECT_NAME} PRIVATE
         # ${CMAKE_CURRENT_LIST_DIR}/lib/tinyusb-midi/usb_descriptors.c
         ${CMAKE_CURRENT_LIST_DIR}/imu.c
+        ${CMAKE_CURRENT_LIST_DIR}/state.c
         ${CMAKE_CURRENT_LIST_DIR}/touch.c
         ${CMAKE_CURRENT_LIST_DIR}/display/display.c
         ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306/ssd1306.c

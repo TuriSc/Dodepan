@@ -37,23 +37,26 @@ void intro_animation(ssd1306_t *p, void (*callback)(void)) {
 
 #define OFFSET_X    32
 #define CHAR_W      7 // Includes spacing
-void display_draw(ssd1306_t *p, state_t *st) {
+void display_draw(ssd1306_t *p) {
+
+    state_t* state = get_state();
+
     ssd1306_clear(p);
-    switch(st->context) {
+    switch(state->context) {
         case CTX_KEY:
         case CTX_SCALE:
         case CTX_INSTRUMENT:
         {
             // Key
-            ssd1306_draw_string_with_font(p, 0, 4, 1, key_font, note_names[st->tonic]);
-            if(st->is_alteration) { ssd1306_draw_string_with_font(p, 15, 0, 1, diesis_font, diesis); }
-            ssd1306_draw_string_with_font(p, 15, 16, 1, octave_font, octave_names[st->octave]);
+            ssd1306_draw_string_with_font(p, 0, 4, 1, key_font, note_names[state->tonic]);
+            if(state->is_alteration) { ssd1306_draw_string_with_font(p, 15, 0, 1, diesis_font, diesis); }
+            ssd1306_draw_string_with_font(p, 15, 16, 1, octave_font, octave_names[state->octave]);
 
             // Scale and instrument
-            ssd1306_draw_string_with_font(p, OFFSET_X, 21, 1, spaced_font, scale_names[st->scale]);
-            ssd1306_draw_string_with_font(p, OFFSET_X, 4, 1, spaced_font, instrument_names[st->instrument]);
-            uint8_t scale_name_width = strlen(scale_names[st->scale]);
-            uint8_t instrument_name_width = strlen(instrument_names[st->instrument]);
+            ssd1306_draw_string_with_font(p, OFFSET_X, 21, 1, spaced_font, scale_names[state->scale]);
+            ssd1306_draw_string_with_font(p, OFFSET_X, 4, 1, spaced_font, instrument_names[state->instrument]);
+            uint8_t scale_name_width = strlen(scale_names[state->scale]);
+            uint8_t instrument_name_width = strlen(instrument_names[state->instrument]);
 
             // Overflow menu. Not interactive, but it's there for good UX,
             // letting users know that there are more pages
@@ -65,7 +68,7 @@ void display_draw(ssd1306_t *p, state_t *st) {
             ssd1306_draw_line(p, 122, 7, 127, 7);
             
             // Draw underline
-            switch(st->context) {
+            switch(state->context) {
                 case CTX_KEY:
                     ssd1306_draw_line(p, 0, 30, 25, 30);
                     ssd1306_draw_line(p, 0, 31, 25, 31);
@@ -82,7 +85,7 @@ void display_draw(ssd1306_t *p, state_t *st) {
         }
         break;
         case CTX_IMU_CONFIG:
-            switch (st->imu_dest) {
+            switch (state->imu_axes) {
                 case 0x0:
                     ssd1306_bmp_show_image_with_offset(p, icon_off_data, icon_off_size, 48, 0);
                 break;
@@ -106,7 +109,7 @@ void display_draw(ssd1306_t *p, state_t *st) {
             // for(uint8_t i=VOL_MIN; i <= 127; i += VOL_INCR){
             for (uint8_t i = 0; i < increments; i++) {
                 uint8_t x = i * width + i * gap;
-                if(st->volume >= VOL_MIN + i * VOL_INCR) {
+                if(state->volume >= VOL_MIN + i * VOL_INCR) {
                     ssd1306_draw_square(p, x, 8, width, 16);
                 } else {
                     ssd1306_draw_empty_square(p, x, 8, width, 16);
@@ -117,7 +120,7 @@ void display_draw(ssd1306_t *p, state_t *st) {
     }
 
 
-    if(st->low_batt) {
+    if(state->low_batt) {
         // Clear an outline around the icon to avoid overlaps
         ssd1306_clear_square(p, 119, 17, 9, 15);
         ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 121, 18);

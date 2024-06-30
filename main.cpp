@@ -30,7 +30,28 @@ typedef uint8_t byte;
 #include "display/display.h"
 #include "state.h"
 
-/* Audio */
+/* Globals */
+
+PRA32_U_Synth g_synth;
+
+state_t* state;
+
+Imu_data imu_data;
+
+#if defined (USE_DISPLAY)
+ssd1306_t display;
+#endif
+
+static alarm_id_t power_on_alarm_id;
+static alarm_id_t long_press_alarm_id;
+static alarm_id_t flash_write_alarm_id;
+
+/* Note and audio */
+
+uint8_t get_note_by_id(uint8_t id) {
+    return get_key() + get_extended_scale(id);
+}
+
 static const struct sound_i2s_config sound_config = {
     .pio_num         = I2S_PIO_NUM,
     .pin_scl         = I2S_CLOCK_PIN_BASE,
@@ -41,68 +62,14 @@ static const struct sound_i2s_config sound_config = {
     .samples_per_buffer = AUDIO_BUFFER_LENGTH,
 };
 
-/* Globals */
-PRA32_U_Synth g_synth;
-
-state_t state;
-
-Imu_data imu_data;
-
-#if defined (USE_DISPLAY)
-ssd1306_t display;
-#endif
-
-static alarm_id_t power_on_alarm_id;
-static alarm_id_t long_press_alarm_id;
-
-uint8_t num_scales = sizeof(scales)/sizeof(scales[0]);
-
-/* Note and audio functions */
-
-uint8_t get_note_by_id(uint8_t n) {
-    return state.key + state.extended_scale[n];
+void update_volume(uint8_t volume) {
+    if(volume == get_volume()) { return; } // Nothing to do
+    set_volume(volume);
+    g_synth.control_change(dodepan_program_parameters[AMP_GAIN], get_volume());
 }
 
-uint8_t get_scale_size(uint8_t s) {
-    for (uint8_t i=1; i<12; i++) {
-        if (scales[s][i] == 0) return i;
-    }
-    return 12;
-}
-
-void update_key() {
-    g_synth.all_notes_off();
-    state.tonic = state.key % 12;
-    state.octave = state.key / 12;  // C3 is in octave 5 in this system because
-                                    // octave -1 is the first element
-    // Map key indices to alterations
-    static bool key_to_alteration_map[12] = {0,1,0,1,0,0,1,0,1,0,1,0};
-    state.is_alteration = (key_to_alteration_map[state.tonic] ? 1 : 0);
-}
-
-void update_scale() {
-    g_synth.all_notes_off();
-    uint8_t scale_size = get_scale_size(state.scale);
-    uint8_t j = 0;
-    uint8_t octave_shift = 0;
-    for (uint8_t i=0; i<12; i++) {
-        state.extended_scale[i] = (scales[state.scale][j] + octave_shift);
-        j++;
-        if (j >= scale_size) {j=0; octave_shift+=12;}
-    }
-}
-
-void update_volume() {
-    // Clip values
-    if (state.volume < VOL_MIN) {
-        state.volume = VOL_MIN;
-    } else if (state.volume > 127) {
-        state.volume = 127;
-    }
-    g_synth.control_change(dodepan_program_parameters[AMP_GAIN], state.volume);
-}
-
-void set_instrument(uint8_t instr) {
+void update_instrument(uint8_t instr) {
+    if(instr == get_instrument()) { return; } // Nothing to do
     switch (instr) {
         case 0: // Load custom Dodepan preset
             for (uint32_t i = 0; i < sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]); ++i) {
@@ -113,48 +80,7 @@ void set_instrument(uint8_t instr) {
             g_synth.program_change(instr - 1);
         break;
     }
-    state.instrument = instr;
-}
-
-void read_flash_data(){ // Only called at startup
-    // Read address is different than write address
-    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
-
-    // Validation
-    uint8_t magic[MAGIC_NUMBER_LENGTH] = MAGIC_NUMBER;
-    bool invalid_data = false;
-    for(uint8_t i=0; i<MAGIC_NUMBER_LENGTH; i++){
-        if(stored_data[i] != magic[i]){ return; } // Invalid data
-    }
-    
-    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99) || // Validate key
-       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15) || // Validate scale
-       (stored_data[MAGIC_NUMBER_LENGTH + 2] > PRESET_PROGRAM_NUMBER_MAX + 1) || // Validate instrument // TODO check last
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03) ||  // Validate IMU configuration
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 127) // Validate volume
-    ) { return; } // Invalid data
-
-    // Data is valid and can be loaded safely
-    state.key =         stored_data[MAGIC_NUMBER_LENGTH + 0];
-    state.scale =       stored_data[MAGIC_NUMBER_LENGTH + 1];
-    state.instrument =  stored_data[MAGIC_NUMBER_LENGTH + 2];
-    state.imu_dest =    stored_data[MAGIC_NUMBER_LENGTH + 3];
-    state.volume =      stored_data[MAGIC_NUMBER_LENGTH + 4];
-}
-
-void write_flash_data() {
-    uint8_t flash_buffer[FLASH_PAGE_SIZE] = MAGIC_NUMBER; // Initialize the buffer with a signature
-
-    flash_buffer[MAGIC_NUMBER_LENGTH + 0] = state.key;
-    flash_buffer[MAGIC_NUMBER_LENGTH + 1] = state.scale;
-    flash_buffer[MAGIC_NUMBER_LENGTH + 2] = state.instrument;
-    flash_buffer[MAGIC_NUMBER_LENGTH + 3] = state.imu_dest;
-    flash_buffer[MAGIC_NUMBER_LENGTH + 4] = state.volume;
-
-    uint32_t ints_id = save_and_disable_interrupts();
-	flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE); // Required for flash_range_program to work
-	flash_range_program(FLASH_TARGET_OFFSET, flash_buffer, FLASH_PAGE_SIZE);
-	restore_interrupts (ints_id);
+    set_instrument(instr);
 }
 
 // static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
@@ -176,9 +102,61 @@ void trigger_note_off(uint8_t note) {
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
+void load_flash_data() { // Only called at startup
+    // Read address is different than write address
+    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
+
+    // Validation
+    uint8_t magic[MAGIC_NUMBER_LENGTH] = MAGIC_NUMBER;
+    bool invalid_data = false;
+    for(uint8_t i=0; i<MAGIC_NUMBER_LENGTH; i++){
+        if(stored_data[i] != magic[i]){ return; } // Invalid data
+    }
+    
+    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99) || // Validate key
+       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15) || // Validate scale
+       (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8) || // Validate instrument // TODO check last
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03) ||  // Validate IMU configuration
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 127) // Validate volume
+    ) { return; } // Invalid data
+
+    // Data is valid and can be loaded safely
+    set_key(            stored_data[MAGIC_NUMBER_LENGTH + 0]);
+    set_scale(          stored_data[MAGIC_NUMBER_LENGTH + 1]);
+    update_instrument(  stored_data[MAGIC_NUMBER_LENGTH + 2]);
+    set_imu_axes(       stored_data[MAGIC_NUMBER_LENGTH + 3]);
+    update_volume(      stored_data[MAGIC_NUMBER_LENGTH + 4]);
+}
+
+void write_flash_data() {
+    // Initialize the buffer with a signature
+    uint8_t flash_buffer[FLASH_PAGE_SIZE] = MAGIC_NUMBER;
+
+    // Gather the rest of the data
+    flash_buffer[MAGIC_NUMBER_LENGTH + 0] = get_key();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 1] = get_scale();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 2] = get_instrument();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 3] = get_imu_axes();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 4] = get_volume();
+
+    // Make sure that the stored data is different than what we're about to write
+    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
+    if( stored_data[MAGIC_NUMBER_LENGTH + 0] == flash_buffer[MAGIC_NUMBER_LENGTH + 0] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 1] == flash_buffer[MAGIC_NUMBER_LENGTH + 1] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 2] == flash_buffer[MAGIC_NUMBER_LENGTH + 2] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 3] == flash_buffer[MAGIC_NUMBER_LENGTH + 3] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 4] == flash_buffer[MAGIC_NUMBER_LENGTH + 4] &&) { return; }
+
+    // Disable interrupts, write, and restore interrupts
+    uint32_t ints_id = save_and_disable_interrupts();
+	flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE); // Required for flash_range_program to work
+	flash_range_program(FLASH_TARGET_OFFSET, flash_buffer, FLASH_PAGE_SIZE);
+	restore_interrupts (ints_id);
+}
+
 // Use the IMU to alter parameters according to device tilting
 void tilt_process() {
-    if(state.imu_dest & 0x02) {
+    if(get_imu_axes() & 0x02) {
         g_synth.control_change(FILTER_CUTOFF, imu_data.deviation_y);
     }
 
@@ -187,13 +165,12 @@ void tilt_process() {
     uint8_t bending_msb = (imu_data.deviation_x >> 7) & 0x7F;
 
     // Send the instruction to the synth
-    if(state.imu_dest & 0x01) {
+    if(get_imu_axes() & 0x01) {
         g_synth.pitch_bend(bending_lsb, bending_msb);
     }
 
-    // Prepare the Midi message
-    static uint8_t throttle;
-    if(throttle++ % 10 != 0) return; // Limit the message rate
+    // static uint8_t throttle;
+    // if(throttle++ % 10 != 0) return; // Limit the message rate
     // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
     // with 8192 (0x2000) being the center value.
     // Send the Midi message
@@ -222,32 +199,93 @@ int64_t power_on_complete(alarm_id_t, void *) {
 }
 
 void intro_complete() {
-    state.context = CTX_KEY;
+    set_context(CTX_KEY);
 }
 
 /* I/O functions */
 
 int64_t on_long_press(alarm_id_t, void *) {
-     switch(state.context) {
+    switch(get_context()) {
         case CTX_KEY:
         case CTX_SCALE:
         case CTX_INSTRUMENT:
-            state.context = CTX_IMU_CONFIG;
+            set_context(CTX_IMU_CONFIG);
         break;
         case CTX_IMU_CONFIG:
-            state.context = CTX_VOLUME;
+            set_context(CTX_VOLUME);
         break;
         case CTX_VOLUME:
         case CTX_INIT:
         default:
             ; // Do nothing
         break;
-     }
+    }
 
 #if defined (USE_DISPLAY)
-    display_draw(&display, &state);
+    display_draw(&display, state);
 #endif
     return 0;
+}
+
+void encoder_up() {
+    uint8_t context = get_context();
+    switch (context) {
+        case CTX_KEY:
+            // D#7 is the highest note that can be set as root note
+            set_key_up();
+            g_synth.all_notes_off();
+        break;
+        case CTX_SCALE:
+            set_scale_up();
+            g_synth.all_notes_off();
+        break;
+        case CTX_INSTRUMENT:
+            update_instrument(get_instrument_up());
+        break;
+        case CTX_IMU_CONFIG:
+            set_imu_axes_up();
+        break;
+        case CTX_VOLUME:
+            update_volume(get_volume_up());
+        break;
+        case CTX_INIT:
+        default:
+            ; // Do nothing
+        break;
+    }
+#if defined (USE_DISPLAY)
+    display_draw(&display, state);
+#endif
+}
+
+void encoder_down() {
+    uint8_t context = get_context();
+    switch (get_context()) {
+        case CTX_KEY:
+            set_key_down();
+            g_synth.all_notes_off();
+        break;
+        case CTX_SCALE:
+            set_scale_down();
+            g_synth.all_notes_off();
+        break;
+        case CTX_INSTRUMENT:
+            update_instrument(get_instrument_down());
+        break;
+        case CTX_IMU_CONFIG:
+            set_imu_axes_down();
+        break;
+        case CTX_VOLUME:
+            update_volume(get_volume_down());
+        break;
+        case CTX_INIT:
+        default:
+            ; // Do nothing
+        break;
+    }
+#if defined (USE_DISPLAY)
+    display_draw(&display, state);
+#endif
 }
 
 void encoder_onchange(rotary_encoder_t *encoder) {
@@ -260,60 +298,10 @@ void encoder_onchange(rotary_encoder_t *encoder) {
     last_position = position;
 
     if (direction == 1) {
-        switch (state.context) {
-            case CTX_KEY:
-                // D#7 is the highest note that can be set as root note
-                if(state.key < 99) { state.key++; }
-                update_key();
-            break;
-            case CTX_SCALE:
-                if(state.scale < num_scales - 1) { state.scale++; }
-                update_scale();
-            break;
-            case CTX_INSTRUMENT:
-                if(state.instrument < PRESET_PROGRAM_NUMBER_MAX + 1) { set_instrument(state.instrument + 1); }
-            break;
-            case CTX_IMU_CONFIG:
-                state.imu_dest = (state.imu_dest == 0x3) ? 0x0 : state.imu_dest + 0x1;
-            break;
-            case CTX_VOLUME:
-                if(state.volume < 127) { state.volume += VOL_INCR; }
-                update_volume();
-            break;
-            case CTX_INIT:
-            default:
-                ; // Do nothing
-            break;
-        }
+        encoder_up();
     } else if (direction == -1) {
-        switch (state.context) {
-            case CTX_KEY:
-                if(state.key > 0) { state.key--; }
-                update_key();
-            break;
-            case CTX_SCALE:
-                if(state.scale > 0) { state.scale--; }
-                update_scale();
-            break;
-            case CTX_INSTRUMENT:
-                if(state.instrument > 0) { set_instrument(state.instrument - 1); }
-            break;
-            case CTX_IMU_CONFIG:
-                state.imu_dest = (state.imu_dest == 0x0) ? 0x3 : state.imu_dest - 0x1;
-            break;
-            case CTX_VOLUME:
-                if(state.volume > VOL_MIN) { state.volume -= VOL_INCR; }
-                update_volume();
-            break;
-            case CTX_INIT:
-            default:
-                ; // Do nothing
-            break;
-        }
+        encoder_down();
     }
-#if defined (USE_DISPLAY)
-    display_draw(&display, &state);
-#endif
 }
 
 void button_onchange(button_t *button_p) {
@@ -321,20 +309,20 @@ void button_onchange(button_t *button_p) {
     if (long_press_alarm_id) cancel_alarm(long_press_alarm_id);
     if(button->state) return; // Ignore button release
     long_press_alarm_id = add_alarm_in_ms(1000, on_long_press, NULL, true);
-    switch(state.context){
+
+    uint8_t context = get_context();
+    switch(context){
         case CTX_KEY:
         case CTX_SCALE:
         case CTX_INSTRUMENT:
-            state.context++;
-            if (state.context == CTX_INSTRUMENT + 1) { state.context = CTX_KEY; }
+            set_context_up(); 
         break;
         case CTX_IMU_CONFIG:
-            state.context = CTX_VOLUME;
-            state.low_batt=true;// TODO Test
-            write_flash_data(); // TODO Test
+            set_context(CTX_VOLUME);
         break;
         case CTX_VOLUME:
-            state.context = CTX_KEY;
+            set_context(CTX_KEY);
+            write_flash_data(); // TODO Testing
         break;
         case CTX_INIT:
         default:
@@ -342,12 +330,12 @@ void button_onchange(button_t *button_p) {
         break;
     }
 #if defined (USE_DISPLAY)
-    display_draw(&display, &state);
+    display_draw(&display, state);
 #endif
 }
 
 void battery_low_detected() {
-    state.low_batt = true;
+    set_low_batt(true);
     battery_check_stop(); // Stop the timer
 }
 
@@ -425,22 +413,18 @@ int main() {
     // Start the synth
     g_synth.initialize();
 
-    // Initialize state
-    state.context = CTX_INIT;
-    state.key = 48; // C3
-    state.scale = 0; // Major
-    state.volume = 127; // Max value
-    state.imu_dest = 0x3; // Both effects are active
-    state.instrument = 0; // Dodepan custom preset
+    // Initialize the state
+    state = get_state();
+    set_context(CTX_INIT);
+    set_key(48); // C3
+    set_scale(0); // Major
+    set_volume(127); // Max value
+    set_imu_axes(0x3); // Both effects are active
+    set_instrument(0); // Dodepan custom preset
+    set_low_batt(false);
 
     // Attempt to load previous settings, if stored on flash
-    read_flash_data();
-
-    update_key();
-    update_volume();
-    update_scale();
-    set_instrument(state.instrument);
-
+    load_flash_data();
 
     // Launch the routine on the second core
     multicore_launch_core1(core1_main);
@@ -468,18 +452,18 @@ int main() {
 
     // Initialize the ADC, used for voltage sensing
     adc_init();
-    // Non-time-critical routine, run by timer
+    // Launch the battery check timed task
     battery_check_init(5000, NULL, (void*)battery_low_detected);
 
 #if defined (USE_DISPLAY)
     // Show a short intro animation. This will distract the user
     // while the hardware is calibrating
     intro_animation(&display, intro_complete);
-    display_draw(&display, &state);
+    display_draw(&display, state);
 #else
     // Since there's no intro animation without a display,
     // let's trigger the new state manually
-    state.context = CTX_KEY;
+    set_context(CTX_KEY);
 #endif
 
     while (true) { // Main loop
