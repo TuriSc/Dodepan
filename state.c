@@ -2,6 +2,7 @@
 #include "state.h"
 #include "config.h"
 #include "scales.h"
+#include "instrument_preset.h"
 
 // Declare the static state instance
 static state_t state;
@@ -112,16 +113,16 @@ void set_instrument(uint8_t instrument) {
     state.instrument = instrument;
 }
 
-uint8_t get_instrument_up() {
+void set_instrument_up() {
     uint8_t instrument = get_instrument();
-    if(instrument < 8) { instrument++; }
-    return instrument;
+    if(instrument < 8) { instrument++; } // TODO User presets
+    set_instrument(instrument);
 }
 
-uint8_t get_instrument_down() {
+void set_instrument_down() {
     uint8_t instrument = get_instrument();
     if(instrument > 0) { instrument--; }
-    return instrument;
+    set_instrument(instrument);
 }
 
 /* Context */
@@ -129,15 +130,31 @@ uint8_t get_context() {
     return state.context;
 }
 
-void set_context(uint8_t context) {
+void set_context(context_t context) {
     state.context = context;
 }
 
-void set_context_up() {
-    uint8_t context = get_context() + 1;
-    // Wrap around to key after instrument
-    if (context == CTX_INSTRUMENT + 1) { context = CTX_KEY; }
-    set_context(context);
+/* Selection */
+uint8_t get_selection() {
+    return state.selection;
+}
+
+void set_selection(selection_t selection) {
+    state.selection = selection;
+}
+
+void set_selection_up() {
+    selection_t selection = get_selection();
+    // Wrap around
+    selection = (selection_t)(((int)selection + 1) % SELECTION_LAST);
+    set_selection(selection);
+}
+
+void set_selection_down() {
+    selection_t selection = get_selection();
+    // Wrap around
+    selection = (selection_t)(((int)selection - 1 + SELECTION_LAST) % SELECTION_LAST);
+    set_selection(selection);
 }
 
 /* IMU axes */
@@ -226,4 +243,72 @@ bool get_low_batt() {
 
 void set_low_batt(bool low_batt) {
     state.low_batt = low_batt;
+}
+
+/* Parameter */
+
+uint8_t get_parameter() {
+    return state.parameter;
+}
+
+void set_parameter(uint8_t param) {
+    uint8_t parameter = param;
+    uint8_t num_parameters = sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]);
+    // Clip values
+    if (parameter >= num_parameters) {
+        parameter = 0;
+    }
+    state.parameter = parameter;
+}
+
+void set_parameter_up() {
+    uint8_t parameter = get_parameter() + 1;
+    // Wrap around
+    if (parameter > 127) {
+        parameter = 0;
+    }
+    set_parameter(parameter);
+}
+
+void set_parameter_down() {
+    uint8_t parameter = get_parameter() - 1;
+    uint8_t num_parameters = sizeof(dodepan_program_parameters) / sizeof(dodepan_program_parameters[0]);
+    // Wrap around
+    if (parameter >= num_parameters) {
+        parameter = num_parameters - 1;
+    }
+    set_parameter(parameter);
+}
+
+/* Argument */
+
+uint8_t get_argument() {
+    return state.argument;
+}
+
+void set_argument(uint8_t arg) {
+    uint8_t argument = arg;
+    // Clip values
+    if (argument > 127) {
+        argument = 127;
+    }
+    state.argument = argument;
+}
+
+void set_argument_up() {
+    uint8_t argument = get_argument();
+    // Do not wrap around
+    if (argument < 127) {
+        argument++;
+    }
+    set_argument(argument);
+}
+
+void set_argument_down() {
+    uint8_t argument = get_argument();
+    // Do not wrap around
+    if (argument > 0) {
+        argument--;
+    }
+    set_argument(argument);
 }

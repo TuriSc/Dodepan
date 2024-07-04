@@ -1,4 +1,9 @@
+#ifndef INSTRUMENT_PRESET_H
+#define INSTRUMENT_PRESET_H
+
 #include "pra32-u-constants.h"
+#define PROGRAM_PARAMS_NUM 43
+
 const uint8_t dodepan_program_parameters[] = {
     OSC_1_WAVE     ,
     OSC_1_SHAPE    ,
@@ -123,3 +128,5 @@ const uint8_t dodepan_program[] = {
      12, // DELAY_TIME - 20 ms
       1, // DELAY_MODE - Ping Pong Delay
 };
+
+#endif

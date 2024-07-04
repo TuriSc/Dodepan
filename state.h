@@ -5,6 +5,30 @@
 extern "C" {
 #endif
 
+typedef enum context {
+    CTX_INIT,
+    CTX_INFO,
+    CTX_SELECTION,
+    CTX_KEY,
+    CTX_SCALE,
+    CTX_INSTRUMENT,
+    CTX_VOLUME,
+    CTX_IMU_CONFIG,
+    CTX_SYNTH_EDIT_PARAM,
+    CTX_SYNTH_EDIT_ARG,
+    CTX_SYNTH_EDIT_STORE,// TODO User presets
+} context_t;
+
+typedef enum selection {
+    SELECTION_KEY,
+    SELECTION_SCALE,
+    SELECTION_INSTRUMENT,
+    SELECTION_VOLUME,
+    SELECTION_IMU_CONFIG,
+    SELECTION_SYNTH_EDIT,
+    SELECTION_LAST,
+} selection_t;
+
 typedef struct state {
     uint8_t key;
     uint8_t scale;
@@ -15,9 +39,12 @@ typedef struct state {
     bool is_alteration;
     uint8_t octave;
     uint8_t instrument;
-    uint8_t context;                // The encoder affects different parameters
+    context_t context;              // The encoder affects different parameters
                                     // according to its current context
+    selection_t selection;
     uint8_t volume;
+    uint8_t parameter;
+    uint8_t argument;
 
     uint8_t imu_axes;               // Determines what the IMU is controlling:
                                     // 0x0 - no effect
@@ -27,13 +54,6 @@ typedef struct state {
 
     bool low_batt;                  // Low battery detected
 } state_t;
-
-#define CTX_INIT        0
-#define CTX_KEY         1
-#define CTX_SCALE       2
-#define CTX_INSTRUMENT  3
-#define CTX_IMU_CONFIG  4
-#define CTX_VOLUME      5
 
 extern uint8_t get_note_by_id(uint8_t id);
 
@@ -54,12 +74,16 @@ void set_extended_scale(uint8_t index, uint8_t note);
 
 uint8_t get_instrument();
 void set_instrument(uint8_t instrument);
-uint8_t get_instrument_up();
-uint8_t get_instrument_down();
+void set_instrument_up();
+void set_instrument_down();
 
-uint8_t get_context();
-void set_context(uint8_t context);
-void set_context_up();
+context_t get_context();
+void set_context(context_t context);
+
+selection_t get_selection();
+void set_selection(selection_t selection);
+void set_selection_up();
+void set_selection_down();
 
 uint8_t get_imu_axes();
 void set_imu_axes(uint8_t imu_axes);
@@ -82,6 +106,16 @@ void set_volume_down();
 
 bool get_low_batt();
 void set_low_batt(bool low_batt);
+
+uint8_t get_parameter();
+void set_parameter(uint8_t param);
+void set_parameter_up();
+void set_parameter_down();
+
+uint8_t get_argument();
+void set_argument(uint8_t arg);
+void set_argument_up();
+void set_argument_down();
 
 #ifdef __cplusplus
 }
