@@ -16,7 +16,7 @@ typedef enum context {
     CTX_IMU_CONFIG,
     CTX_SYNTH_EDIT_PARAM,
     CTX_SYNTH_EDIT_ARG,
-    CTX_SYNTH_EDIT_STORE,// TODO User presets
+    CTX_SYNTH_EDIT_STORE,
 } context_t;
 
 typedef enum selection {
@@ -45,6 +45,8 @@ typedef struct state {
     uint8_t volume;
     uint8_t parameter;
     uint8_t argument;
+    int8_t preset_slot;
+    bool preset_has_changes;
 
     uint8_t imu_axes;               // Determines what the IMU is controlling:
                                     // 0x0 - no effect
@@ -116,6 +118,14 @@ uint8_t get_argument();
 void set_argument(uint8_t arg);
 void set_argument_up();
 void set_argument_down();
+
+int8_t get_preset_slot();
+void set_preset_slot(int8_t slot);
+void set_preset_slot_up();
+void set_preset_slot_down();
+
+bool get_preset_has_changes();
+void set_preset_has_changes(bool flag);
 
 #ifdef __cplusplus
 }

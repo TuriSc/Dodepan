@@ -1,7 +1,7 @@
 /* Dodepan
- * Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out.
+ * An expressive electronic instrument and Midi controller built on Raspberry Pi Pico".
  * By Turi Scandurra – https://turiscandurra.com/circuits
- * v2.2.2b - 2024.06.21
+ * v2.3.0b - 2024.07.05
  */
 
 #include <stdio.h>
@@ -48,6 +48,170 @@ static alarm_id_t power_on_alarm_id;
 static alarm_id_t long_press_alarm_id;
 static alarm_id_t flash_write_alarm_id;
 
+void core1_main();
+
+/* User Presets and flash memory */
+static inline uint8_t get_argument_from_parameter(uint8_t parameter) {
+    uint8_t control_number = dodepan_program_parameters[parameter];
+    return g_synth.current_controller_value(control_number);
+}
+
+static inline void update_argument_from_parameter(uint8_t parameter) {
+    uint8_t control_number = dodepan_program_parameters[parameter];
+    uint8_t argument = g_synth.current_controller_value(control_number);
+    set_argument(argument);
+}
+
+void load_user_preset(uint8_t instrument) {
+    uint8_t preset_num = instrument - 9; // Subtracting the 9 default presets
+    for (uint32_t i = 0; i < PROGRAM_PARAMS_NUM; i++) {
+        g_synth.control_change(dodepan_program_parameters[i], user_presets[preset_num][i]);
+    }
+}
+
+static inline void sync_control_change() {
+    uint8_t parameter = get_parameter();
+    uint8_t control_number = dodepan_program_parameters[parameter];
+    uint8_t argument = get_argument();
+    g_synth.control_change(control_number, argument);
+}
+
+void sync_instrument() {
+    uint8_t instrument = get_instrument();
+    switch (instrument) {
+        case 0: // Load custom Dodepan preset
+            for (uint32_t i = 0; i < PROGRAM_PARAMS_NUM; i++) {
+                g_synth.control_change(dodepan_program_parameters[i], dodepan_preset[i]);
+            }
+            set_preset_slot(-1); // No slot selected
+        break;
+        case 9:
+        case 10:
+        case 11:
+        case 12:
+            load_user_preset(instrument);
+            // Set preset_slot selection to match loaded instrument
+            set_preset_slot(instrument - 9);
+        break;
+        default: // case 1-8: load PRA32-U presets
+            g_synth.program_change(instrument - 1);
+            set_preset_slot(-1); // No slot selected
+        break;
+    }
+}
+
+bool load_flash_data() { // Only called at startup
+    // Read address is different than write address
+    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
+
+    // Validation
+    uint8_t magic[MAGIC_NUMBER_LENGTH] = MAGIC_NUMBER;
+    bool invalid_data = false;
+    for(uint8_t i=0; i<MAGIC_NUMBER_LENGTH; i++){
+        if(stored_data[i] != magic[i]){ return false; } // Invalid data
+    }
+    
+    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99)                   || // Validate key
+       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15)                   || // Validate scale
+       (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8 + NUM_PRESET_SLOTS) || // Validate instrument
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03)                 || // Validate IMU configuration
+       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 8)                       // Validate volume
+    ) { return false; } // Invalid data
+
+    // Data is valid and can be loaded safely
+    set_key(       stored_data[MAGIC_NUMBER_LENGTH + 0]);
+    set_scale(     stored_data[MAGIC_NUMBER_LENGTH + 1]);
+    set_instrument(stored_data[MAGIC_NUMBER_LENGTH + 2]);
+    set_imu_axes(  stored_data[MAGIC_NUMBER_LENGTH + 3]);
+    set_volume(    stored_data[MAGIC_NUMBER_LENGTH + 4]);
+
+    // Load user presets
+    uint8_t offset = MAGIC_NUMBER_LENGTH + 5;
+    for (uint8_t i = 0; i < 4; i++) {
+        for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
+            user_presets[i][j] = stored_data[offset++];
+        }
+    }
+
+    // Load instrument data
+    sync_instrument();
+
+    return true;
+}
+
+int64_t write_flash_data(alarm_id_t, void *) {
+    // Initialize the buffer with a signature
+    uint8_t flash_buffer[FLASH_PAGE_SIZE] = MAGIC_NUMBER;
+    uint8_t index = MAGIC_NUMBER_LENGTH;
+
+    // Gather the rest of the data
+    flash_buffer[MAGIC_NUMBER_LENGTH + 0] = get_key();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 1] = get_scale();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 2] = get_instrument();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 3] = get_imu_axes();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 4] = get_volume();
+
+    // Stop here if the stored data is the same as what we're about to write
+    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
+    if( stored_data[MAGIC_NUMBER_LENGTH + 0] == flash_buffer[MAGIC_NUMBER_LENGTH + 0] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 1] == flash_buffer[MAGIC_NUMBER_LENGTH + 1] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 2] == flash_buffer[MAGIC_NUMBER_LENGTH + 2] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 3] == flash_buffer[MAGIC_NUMBER_LENGTH + 3] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 4] == flash_buffer[MAGIC_NUMBER_LENGTH + 4] &&
+        get_preset_has_changes() == false) { return 0; }
+
+    // Add user presets to the write buffer
+    uint8_t offset = MAGIC_NUMBER_LENGTH + 5;
+    for (uint8_t i = 0; i < 4; i++) {
+        for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
+            flash_buffer[offset++] = user_presets[i][j];
+        }
+    }
+
+    // Turn on built-in LED
+    gpio_put(PICO_DEFAULT_LED_PIN, 1);
+
+    // Stop audio and synth processes on core1
+    multicore_reset_core1();
+
+    // Disable interrupts, write, and restore interrupts
+    uint32_t ints_id = save_and_disable_interrupts();
+	flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE); // Required for flash_range_program to work
+	flash_range_program(FLASH_TARGET_OFFSET, flash_buffer, FLASH_PAGE_SIZE);
+	restore_interrupts (ints_id);
+
+    // Restart processes on core1
+    multicore_launch_core1(core1_main);
+
+    // Wash "dirty" flag
+    set_preset_has_changes(false);
+
+    // Turn off built-in LED
+    gpio_put(PICO_DEFAULT_LED_PIN, 0);
+
+    return 0;
+}
+
+void request_flash_write() {
+    // Schedule writing settings to flash.
+    // This delay is introduced to minimize write operations.
+    if (flash_write_alarm_id) cancel_alarm(flash_write_alarm_id);
+    flash_write_alarm_id = add_alarm_in_ms(FLASH_WRITE_DELAY_S * 1000, write_flash_data, NULL, true);
+}
+
+void submit_preset_slot() {
+    int8_t slot = get_preset_slot();
+    if(slot == -1) { return; }
+    for (uint8_t i = 0; i < PROGRAM_PARAMS_NUM; i++) {
+        user_presets[slot][i] = get_argument_from_parameter(i);
+    }
+    set_preset_has_changes(true);
+    request_flash_write();
+
+    // Since we've written a preset, let's select it on the main screen
+    set_instrument( 9 + slot);
+}
+
 /* Note and audio */
 
 uint8_t get_note_by_id(uint8_t id) {
@@ -63,34 +227,6 @@ static const struct sound_i2s_config sound_config = {
     .bits_per_sample = 16,
     .samples_per_buffer = AUDIO_BUFFER_LENGTH,
 };
-
-void load_user_preset(uint8_t instrument) {
-    uint8_t preset_num = instrument - 9;
-    for (uint32_t i = 0; i < PROGRAM_PARAMS_NUM; i++) {
-        g_synth.control_change(dodepan_program_parameters[i], user_presets[preset_num][i]);
-    }
-}
-
-void update_instrument() {
-    uint8_t instrument = get_instrument();
-    switch (instrument) {
-        case 0: // Load custom Dodepan preset
-            for (uint32_t i = 0; i < PROGRAM_PARAMS_NUM; i++) {
-                g_synth.control_change(dodepan_program_parameters[i], dodepan_program[i]);
-            }
-        break;
-        case 9:
-        case 10:
-        case 11:
-        case 12:
-            load_user_preset(instrument);
-        break;
-        default: // case 1-8: load PRA32-U presets
-            g_synth.program_change(instrument - 1);
-        break;
-        // TODO User presets
-    }
-}
 
 // static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
 //     uint8_t msg[3] = { b1, b2, b3 };
@@ -109,88 +245,6 @@ void trigger_note_on(uint8_t note) {
 void trigger_note_off(uint8_t note) {
     g_synth.note_off(note);
     // tudi_midi_write24(0, 0x80, note, 0);
-}
-
-bool load_flash_data() { // Only called at startup
-    // Read address is different than write address
-    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
-
-    // Validation
-    uint8_t magic[MAGIC_NUMBER_LENGTH] = MAGIC_NUMBER;
-    bool invalid_data = false;
-    for(uint8_t i=0; i<MAGIC_NUMBER_LENGTH; i++){
-        if(stored_data[i] != magic[i]){ return false; } // Invalid data
-    }
-    
-    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99)   || // Validate key
-       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15)   || // Validate scale
-       (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8)    || // Validate instrument
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03) || // Validate IMU configuration
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 8)       // Validate volume
-    ) { return false; } // Invalid data
-
-    // Data is valid and can be loaded safely
-    set_key(       stored_data[MAGIC_NUMBER_LENGTH + 0]);
-    set_scale(     stored_data[MAGIC_NUMBER_LENGTH + 1]);
-    set_instrument(stored_data[MAGIC_NUMBER_LENGTH + 2]);
-    set_imu_axes(  stored_data[MAGIC_NUMBER_LENGTH + 3]);
-    set_volume(    stored_data[MAGIC_NUMBER_LENGTH + 4]);
-    update_instrument();
-
-    // Load user presets, TODO
-    // uint8_t offset = MAGIC_NUMBER_LENGTH + 5;
-    // for (uint8_t i = 0; i < 4; i++) {
-    //     for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
-    //         user_presets[i][j] = stored_data[PROGRAM_PARAMS_NUM * i + offset + j];
-    //     }
-    // }
-
-    return true;
-}
-
-void core1_main();
-
-int64_t write_flash_data(alarm_id_t, void *) {
-    // Initialize the buffer with a signature
-    uint8_t flash_buffer[FLASH_PAGE_SIZE] = MAGIC_NUMBER;
-
-    // Gather the rest of the data
-    flash_buffer[MAGIC_NUMBER_LENGTH + 0] = get_key();
-    flash_buffer[MAGIC_NUMBER_LENGTH + 1] = get_scale();
-    flash_buffer[MAGIC_NUMBER_LENGTH + 2] = get_instrument();
-    flash_buffer[MAGIC_NUMBER_LENGTH + 3] = get_imu_axes();
-    flash_buffer[MAGIC_NUMBER_LENGTH + 4] = get_volume();
-
-    // Make sure that the stored data is different than what we're about to write
-    const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
-    if( stored_data[MAGIC_NUMBER_LENGTH + 0] == flash_buffer[MAGIC_NUMBER_LENGTH + 0] &&
-        stored_data[MAGIC_NUMBER_LENGTH + 1] == flash_buffer[MAGIC_NUMBER_LENGTH + 1] &&
-        stored_data[MAGIC_NUMBER_LENGTH + 2] == flash_buffer[MAGIC_NUMBER_LENGTH + 2] &&
-        stored_data[MAGIC_NUMBER_LENGTH + 3] == flash_buffer[MAGIC_NUMBER_LENGTH + 3] &&
-        stored_data[MAGIC_NUMBER_LENGTH + 4] == flash_buffer[MAGIC_NUMBER_LENGTH + 4] ) { return 0; }
-
-    // TODO user presets
-
-    // Stop audio and synth processes on core1
-    multicore_reset_core1();
-
-    // Disable interrupts, write, and restore interrupts
-    uint32_t ints_id = save_and_disable_interrupts();
-	flash_range_erase(FLASH_TARGET_OFFSET, FLASH_SECTOR_SIZE); // Required for flash_range_program to work
-	flash_range_program(FLASH_TARGET_OFFSET, flash_buffer, FLASH_PAGE_SIZE);
-	restore_interrupts (ints_id);
-
-    // Restart processes on core1
-    multicore_launch_core1(core1_main);
-
-    return 0;
-}
-
-void request_flash_write() {
-    // Schedule writing settings to flash.
-    // This delay is introduced to minimize write operations.
-    if (flash_write_alarm_id) cancel_alarm(flash_write_alarm_id);
-    flash_write_alarm_id = add_alarm_in_ms(FLASH_WRITE_DELAY_S * 1000, write_flash_data, NULL, true);
 }
 
 // Use the IMU to alter parameters according to device tilting
@@ -216,14 +270,7 @@ void tilt_process() {
     // tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
 }
 
-/*
-static void __not_in_flash_func(wait_for_reboot)(void) {
-	__asm volatile ( " cpsid i " );
-	while ( true )  {};					// reboot should happen here when watchdog times out
-}
-*/
 static void __not_in_flash_func(i2s_audio_task)(void) {
-// static inline void i2s_audio_task(void) {
     static int16_t *last_buffer;
     int16_t *buffer = sound_i2s_get_next_buffer();
     int16_t right_buffer; // Necessary quirk for compatibility with
@@ -250,18 +297,6 @@ void intro_complete() {
     set_context(CTX_SELECTION);
 }
 
-static inline void set_argument_from_parameter() {
-    uint8_t control_number = dodepan_program_parameters[get_parameter()];
-    uint8_t argument = g_synth.current_controller_value(control_number);
-    set_argument(argument);
-}
-
-static inline void set_control_change_from_argument() {
-    uint8_t control_number = dodepan_program_parameters[get_parameter()];
-    uint8_t argument = get_argument();
-    g_synth.control_change(control_number, argument);
-}
-
 /* I/O functions */
 
 int64_t on_long_press(alarm_id_t, void *) {
@@ -274,13 +309,15 @@ int64_t on_long_press(alarm_id_t, void *) {
         case CTX_IMU_CONFIG:
             set_context(CTX_INFO);
         break;
-        case CTX_INFO:
         case CTX_SYNTH_EDIT_PARAM:
         case CTX_SYNTH_EDIT_ARG:
+            set_context(CTX_SYNTH_EDIT_STORE);
+        break;
+        case CTX_INFO:
             set_context(CTX_SELECTION);
-            // request_flash_write(); //TODO testing
         break;
         case CTX_INIT:
+        case CTX_SYNTH_EDIT_STORE:
         default:
             ; // Do nothing
         break;
@@ -309,7 +346,7 @@ void encoder_up() {
         break;
         case CTX_INSTRUMENT:
             set_instrument_up();
-            update_instrument();
+            sync_instrument();
         break;
         case CTX_IMU_CONFIG:
             set_imu_axes_up();
@@ -319,11 +356,14 @@ void encoder_up() {
         break;
         case CTX_SYNTH_EDIT_PARAM:
             set_parameter_up();
-            set_argument_from_parameter();
+            update_argument_from_parameter(get_parameter());
         break;
         case CTX_SYNTH_EDIT_ARG:
             set_argument_up();
-            set_control_change_from_argument();
+            sync_control_change();
+        break;
+        case CTX_SYNTH_EDIT_STORE:
+            set_preset_slot_up();
         break;
         case CTX_INIT:
         case CTX_INFO:
@@ -352,7 +392,7 @@ void encoder_down() {
         break;
         case CTX_INSTRUMENT:
             set_instrument_down();
-            update_instrument();
+            sync_instrument();
         break;
         case CTX_IMU_CONFIG:
             set_imu_axes_down();
@@ -362,11 +402,14 @@ void encoder_down() {
         break;
         case CTX_SYNTH_EDIT_PARAM:
             set_parameter_down();
-            set_argument_from_parameter();
+            update_argument_from_parameter(get_parameter());
         break;
         case CTX_SYNTH_EDIT_ARG:
             set_argument_down();
-            set_control_change_from_argument();
+            sync_control_change();
+        break;
+        case CTX_SYNTH_EDIT_STORE:
+            set_preset_slot_down();
         break;
         case CTX_INIT:
         default:
@@ -423,6 +466,7 @@ void button_onchange(button_t *button_p) {
                 break;
                 case SELECTION_SYNTH_EDIT:
                     set_context(CTX_SYNTH_EDIT_PARAM);
+                    update_argument_from_parameter(get_parameter());
                 break;
             }
         }
@@ -434,13 +478,17 @@ void button_onchange(button_t *button_p) {
         case CTX_VOLUME:
         case CTX_IMU_CONFIG:
             set_context(CTX_SELECTION);
-            // request_flash_write(); //TODO testing
+            request_flash_write();
         break;
         case CTX_SYNTH_EDIT_PARAM:
             set_context(CTX_SYNTH_EDIT_ARG);
         break;
         case CTX_SYNTH_EDIT_ARG:
             set_context(CTX_SYNTH_EDIT_PARAM);
+        break;
+        case CTX_SYNTH_EDIT_STORE:
+            submit_preset_slot();
+            set_context(CTX_SELECTION);
         break;
         case CTX_INIT:
         default:
@@ -535,13 +583,14 @@ int main() {
     state = get_state();
     set_context(CTX_INIT);
     set_low_batt(false);
+    set_preset_slot(-1); // No slot selected
+    set_preset_has_changes(false);
 
-    // Allocate memory for the user preset array
+    // Allocate memory for the user presets array
     user_presets = (uint8_t **)malloc(4 * sizeof(uint8_t *));
     for (uint8_t i = 0; i < 4; i++) {
         user_presets[i] = (uint8_t *)malloc(PROGRAM_PARAMS_NUM * sizeof(uint8_t));
     }
-
 
     // Attempt to load previous settings, if stored on flash
     bool data_loaded = load_flash_data();
@@ -550,13 +599,13 @@ int main() {
         set_key(48); // C3
         set_scale(0); // Major
         set_instrument(0); // Dodepan custom preset
-        update_instrument();
+        sync_instrument();
         set_imu_axes(0x3); // Both effects are active
         set_volume(8); // Max value
         // Copy the custom preset to the four user preset slots
         for (uint8_t i = 0; i < 4; i++) {
             for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
-                user_presets[i][j] = dodepan_program_parameters[j];
+                user_presets[i][j] = dodepan_preset[j];
             }
         }
     }

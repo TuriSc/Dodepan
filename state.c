@@ -115,7 +115,7 @@ void set_instrument(uint8_t instrument) {
 
 void set_instrument_up() {
     uint8_t instrument = get_instrument();
-    if(instrument < 8) { instrument++; } // TODO User presets
+    if(instrument < 8 + NUM_PRESET_SLOTS) { instrument++; }
     set_instrument(instrument);
 }
 
@@ -311,4 +311,40 @@ void set_argument_down() {
         argument--;
     }
     set_argument(argument);
+}
+
+/* Preset slot */
+int8_t get_preset_slot() {
+    return state.preset_slot;
+}
+
+void set_preset_slot(int8_t slot) {
+    int8_t preset_slot = slot;
+    state.preset_slot = preset_slot;
+}
+
+void set_preset_slot_up() {
+    int8_t preset_slot = get_preset_slot();
+    // Do not wrap around
+    if (preset_slot < NUM_PRESET_SLOTS) {
+        preset_slot++;
+    }
+    set_preset_slot(preset_slot);
+}
+
+void set_preset_slot_down() {
+    int8_t preset_slot = get_preset_slot();
+    // Do not wrap around
+    if (preset_slot > -1) {
+        preset_slot--;
+    }
+    set_preset_slot(preset_slot);
+}
+
+bool get_preset_has_changes() {
+    return state.preset_has_changes;
+}
+
+void set_preset_has_changes(bool flag) {
+    state.preset_has_changes = flag;
 }

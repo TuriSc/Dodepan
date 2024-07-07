@@ -3,7 +3,7 @@
 
 /* Device identifiers */
 #define PROGRAM_NAME            "Dodepan"
-#define PROGRAM_VERSION         "2.1.1b"
+#define PROGRAM_VERSION         "2.3.0b"
 #define PROGRAM_DESCRIPTION     "Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out."
 #define PROGRAM_URL             "https://turiscandurra.com/circuits"
 #define USB_STR_MANUFACTURER    "TuriScandurra"
@@ -92,4 +92,5 @@
 #define MAGIC_NUMBER                {0x44, 0x4F, 0x44, 0x45} // 'DODE' - δώδε means 'twelve' in ancient Greek
 #define MAGIC_NUMBER_LENGTH         4
 #define FLASH_WRITE_DELAY_S         10  // To minimize flash operations, delay writing by this amount of seconds
+#define NUM_PRESET_SLOTS            4
 #endif /* CONFIG_H_ */

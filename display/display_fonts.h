@@ -87,8 +87,7 @@ const unsigned char octave_font[] = {
 };
 
 // This is the library's default 8x5 font with extra spacing for readability
-const uint8_t spaced_font[] =
-{
+const uint8_t spaced_font[] = {
 			8, 5, 2, 32, 126,
 			0x00, 0x00, 0x00, 0x00, 0x00,
 			0x00, 0x00, 0x5F, 0x00, 0x00,

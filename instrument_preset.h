@@ -68,7 +68,7 @@ const uint8_t dodepan_program_parameters[] = {
 
 // See PRA32-U-Parameter-Guide.md for more guidance
 
-const uint8_t dodepan_program[] = {
+const uint8_t dodepan_preset[] = {
       5, // OSC_1_WAVE - Pulse wave for a percussive sound
      88, // OSC_1_SHAPE - Mellow waveform shaping
     106, // OSC_1_MORPH - Add some waveform morphing
