@@ -38,7 +38,7 @@
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // Note: the display and the MPU share the same I²S bus and pins
-#define USE_GYRO                    // The IMU is optional, but gives you velocity and bending
+#define USE_IMU                     // The IMU is optional, but gives you velocity and bending
 #define MPU6050_I2C_PORT            i2c1
 #define MPU6050_SDA_PIN             SSD1306_SDA_PIN
 #define MPU6050_SDA_DESCRIPTION     "MPU6050 SDA"

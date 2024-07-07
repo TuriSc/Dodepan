@@ -521,13 +521,13 @@ void bi_decl_all() {
     bi_decl(bi_1pin_with_name(ENCODER_SWITCH_PIN, ENCODER_SWITCH_DESCRIPTION));
     bi_decl(bi_1pin_with_name(BATT_LVL_PIN, BATT_LVL_DESCRIPTION));
     
-#if defined USE_DISPLAY && defined USE_GYRO
+#if defined USE_DISPLAY && defined USE_IMU
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_MPU6050_SCL_DESCRIPTION));
 #elif defined USE_DISPLAY
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_SCL_DESCRIPTION));
-#elif defined USE_GYRO
+#elif defined USE_IMU
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, MPU6050_SCL_DESCRIPTION));
 #endif
@@ -557,7 +557,7 @@ int main() {
     bi_decl_all();
 
     // Initialize display and IMU (sharing an I²C bus)
-#if defined (USE_DISPLAY) || defined (USE_GYRO)
+#if defined (USE_DISPLAY) || defined (USE_IMU)
     gpio_init(SSD1306_SDA_PIN);
     gpio_init(SSD1306_SCL_PIN);
     gpio_set_function(SSD1306_SDA_PIN, GPIO_FUNC_I2C);
@@ -572,7 +572,7 @@ int main() {
     display_init(&display);
 #endif
 
-#if defined (USE_GYRO)
+#if defined (USE_IMU)
     imu_init(); // MPU6050
 #endif
 
@@ -661,7 +661,7 @@ int main() {
     while (true) { // Main loop
         mpr121_task();
 
-#if defined (USE_GYRO)
+#if defined (USE_IMU)
         imu_task(&imu_data);
         tilt_process();
 #endif

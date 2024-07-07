@@ -12,10 +12,10 @@
 #include "display_fonts.h"
 #include "display_strings.h"
 #include "intro.h"
-#include "icon_gyro_off.h"
-#include "icon_gyro_on_x.h"
-#include "icon_gyro_on_y.h"
-#include "icon_gyro_on_x_y.h"
+#include "icon_imu_off.h"
+#include "icon_imu_on_x.h"
+#include "icon_imu_on_y.h"
+#include "icon_imu_on_x_y.h"
 #include "icon_close.h"
 #include "icon_parameters.h"
 #include "icon_low_batt.h"
@@ -75,16 +75,16 @@ static inline void draw_info_screen(ssd1306_t *p) {
 static inline void draw_imu_axes_screen(ssd1306_t *p) {
     switch (get_imu_axes()) {
         case 0x0:
-            ssd1306_bmp_show_image_with_offset(p, icon_gyro_off_data, icon_gyro_off_size, 48, 0);
+            ssd1306_bmp_show_image_with_offset(p, icon_imu_off_data, icon_imu_off_size, 48, 0);
         break;
         case 0x1:
-            ssd1306_bmp_show_image_with_offset(p, icon_gyro_on_x_data, icon_gyro_on_x_size, 48, 0);
+            ssd1306_bmp_show_image_with_offset(p, icon_imu_on_x_data, icon_imu_on_x_size, 48, 0);
         break;
         case 0x2:
-            ssd1306_bmp_show_image_with_offset(p, icon_gyro_on_y_data, icon_gyro_on_y_size, 48, 0);
+            ssd1306_bmp_show_image_with_offset(p, icon_imu_on_y_data, icon_imu_on_y_size, 48, 0);
         break;
         case 0x3:
-            ssd1306_bmp_show_image_with_offset(p, icon_gyro_on_x_y_data, icon_gyro_on_x_y_size, 48, 0);
+            ssd1306_bmp_show_image_with_offset(p, icon_imu_on_x_y_data, icon_imu_on_x_y_size, 48, 0);
         break;
     }
 
