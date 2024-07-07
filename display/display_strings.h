@@ -128,4 +128,6 @@ const char *parameter_names[] = {
     "Delay Mode",
 };
 
+const char *string_version = "Version ";
+
 #endif

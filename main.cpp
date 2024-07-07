@@ -196,7 +196,7 @@ void request_flash_write() {
     // Schedule writing settings to flash.
     // This delay is introduced to minimize write operations.
     if (flash_write_alarm_id) cancel_alarm(flash_write_alarm_id);
-    flash_write_alarm_id = add_alarm_in_ms(FLASH_WRITE_DELAY_S * 1000, write_flash_data, NULL, true);
+    // TODO testing flash_write_alarm_id = add_alarm_in_ms(FLASH_WRITE_DELAY_S * 1000, write_flash_data, NULL, true);
 }
 
 void submit_preset_slot() {
@@ -302,12 +302,14 @@ void intro_complete() {
 int64_t on_long_press(alarm_id_t, void *) {
     switch(get_context()) {
         case CTX_SELECTION:
+            set_context(CTX_INFO);
+        break;
         case CTX_KEY:
         case CTX_SCALE:
         case CTX_INSTRUMENT:
         case CTX_VOLUME:
         case CTX_IMU_CONFIG:
-            set_context(CTX_INFO);
+            set_context(CTX_SELECTION);
         break;
         case CTX_SYNTH_EDIT_PARAM:
         case CTX_SYNTH_EDIT_ARG:
@@ -489,6 +491,7 @@ void button_onchange(button_t *button_p) {
         case CTX_SYNTH_EDIT_STORE:
             submit_preset_slot();
             set_context(CTX_SELECTION);
+            set_selection(SELECTION_KEY);
         break;
         case CTX_INIT:
         default:

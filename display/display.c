@@ -16,8 +16,8 @@
 #include "icon_gyro_on_x.h"
 #include "icon_gyro_on_y.h"
 #include "icon_gyro_on_x_y.h"
-#include "icon_bar.h"
 #include "icon_close.h"
+#include "icon_parameters.h"
 #include "icon_low_batt.h"
 
 void display_init(ssd1306_t *p) {
@@ -30,7 +30,7 @@ void display_init(ssd1306_t *p) {
 static inline void draw_info_screen(ssd1306_t *p) {
     uint8_t baseline = 0;
     char version_number[18];
-    snprintf(version_number, sizeof(version_number), "%s%s", "Version ", PROGRAM_VERSION);
+    snprintf(version_number, sizeof(version_number), "%s%s", string_version, PROGRAM_VERSION);
     ssd1306_draw_string_with_font(p, 8, baseline, 1, spaced_font, version_number);
     baseline += 14;
 
@@ -56,23 +56,23 @@ static inline void draw_info_screen(ssd1306_t *p) {
     }
 }
 
-static inline void draw_volume_screen(ssd1306_t *p){
-    // Draw the volume bars
-    uint8_t increments = 9; // 0 to 8
-    uint8_t gap = (128 / increments / 4);
-    uint8_t width = 128 / increments - gap;
+// static inline void draw_volume_screen(ssd1306_t *p){
+//     // Draw the volume bars
+//     uint8_t increments = 9; // 0 to 8
+//     uint8_t gap = (128 / increments / 4);
+//     uint8_t width = 128 / increments - gap;
 
-    for (uint8_t i = 1; i < increments; i++) {
-        uint8_t x = i * width + i * gap;
-        if(get_volume() >= i) {
-            ssd1306_draw_square(p, x, 8, width, 16);
-        } else {
-            ssd1306_draw_empty_square(p, x, 8, width, 16);
-        }
-    }
-}
+//     for (uint8_t i = 1; i < increments; i++) {
+//         uint8_t x = i * width + i * gap;
+//         if(get_volume() >= i) {
+//             ssd1306_draw_square(p, x, 10, width, 12);
+//         } else {
+//             ssd1306_draw_empty_square(p, x, 10, width, 12);
+//         }
+//     }
+// }
 
-static inline void draw_imu_axes_screen(ssd1306_t *p){
+static inline void draw_imu_axes_screen(ssd1306_t *p) {
     switch (get_imu_axes()) {
         case 0x0:
             ssd1306_bmp_show_image_with_offset(p, icon_gyro_off_data, icon_gyro_off_size, 48, 0);
@@ -86,6 +86,11 @@ static inline void draw_imu_axes_screen(ssd1306_t *p){
         case 0x3:
             ssd1306_bmp_show_image_with_offset(p, icon_gyro_on_x_y_data, icon_gyro_on_x_y_size, 48, 0);
         break;
+    }
+
+    // Draw selection mark
+    if(get_context() == CTX_IMU_CONFIG) {
+        ssd1306_draw_square(p, 0, 0, 2, 32);
     }
 }
 
@@ -140,6 +145,15 @@ void intro_animation(ssd1306_t *p, void (*callback)(void)) {
     callback();
 }
 
+void draw_menu_title_screen(ssd1306_t *p) {
+     selection_t selection = get_selection();
+        switch (selection) {
+            case SELECTION_SYNTH_EDIT:
+                ssd1306_bmp_show_image_with_offset(p, icon_parameters_data, icon_parameters_size, 49, 6);
+            break;
+        }
+}
+
 #define OFFSET_X    32
 #define CHAR_W      7 // Includes spacing
 static inline void draw_main_screen(ssd1306_t *p) {
@@ -158,8 +172,16 @@ static inline void draw_main_screen(ssd1306_t *p) {
     uint8_t instrument_name_width = strlen(instrument_names[get_instrument()]);
     if (instrument_name_width > 12) { instrument_name_width = 12; }
 
-    // Clear an area around the icon bar to avoid overlaps
-    ssd1306_clear_square(p, 116, 0, 12, 32);
+    // Volume
+    uint8_t increments = 9; // 0 to 8
+    uint8_t bar_height = 3;
+
+    for (uint8_t i = 1; i < increments; i++) {
+        uint8_t y = 32 - (bar_height * i + i);
+        if(get_volume() >= i) {
+            ssd1306_draw_square(p, 120, y, 7, bar_height);
+        } 
+    }
     
     // Draw selection mark and underline
     switch(get_context()) {
@@ -177,12 +199,6 @@ static inline void draw_main_screen(ssd1306_t *p) {
                 case SELECTION_VOLUME:
                     ssd1306_draw_square(p, 117, 0, 2, 6);
                 break;
-                case SELECTION_IMU_CONFIG:
-                    ssd1306_draw_square(p, 117, 7, 2, 6);
-                break;
-                case SELECTION_SYNTH_EDIT:
-                    ssd1306_draw_square(p, 117, 14, 2, 6);
-                break;
             }
         }
         break;
@@ -195,33 +211,52 @@ static inline void draw_main_screen(ssd1306_t *p) {
         case CTX_INSTRUMENT:
             ssd1306_draw_square(p, OFFSET_X, 30, CHAR_W * instrument_name_width, 2);
         break;
+        case CTX_VOLUME:
+            ssd1306_draw_square(p, 117, 0, 2, 32);
+        break;
     }
 
-    // Icons
-    ssd1306_bmp_show_image_with_offset(p, icon_bar_data, icon_bar_size, 120, 0);
-
+    // Low battery icon
     if(get_low_batt()) {
-        ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 120, 21);
+        // ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 120, 21);
+        // Clear an outline around the icon to avoid overlaps
+        ssd1306_clear_square(p, 119, 17, 9, 15);
+        ssd1306_bmp_show_image_with_offset(p, icon_low_batt_data, icon_low_batt_size, 121, 18);
     }
 }
 
 void display_draw(ssd1306_t *p) {
-
-    state_t* state = get_state();
+    selection_t selection = get_selection();
+    context_t context = get_context();
 
     ssd1306_clear(p);
-    switch(get_context()) {
-        case CTX_SELECTION:
+
+    switch(context) {
+        case CTX_SELECTION: {
+            switch (selection) {
+                case SELECTION_KEY:
+                case SELECTION_SCALE:
+                case SELECTION_INSTRUMENT:
+                case SELECTION_VOLUME:
+                    draw_main_screen(p);
+                break;
+                case SELECTION_IMU_CONFIG:
+                    draw_imu_axes_screen(p);
+                break;
+                case SELECTION_SYNTH_EDIT:
+                    draw_menu_title_screen(p);
+                break;
+            }
+            break;
+        }
         case CTX_KEY:
         case CTX_SCALE:
         case CTX_INSTRUMENT:
+        case CTX_VOLUME:
             draw_main_screen(p);
         break;
         case CTX_IMU_CONFIG:
             draw_imu_axes_screen(p);
-        break;
-        case CTX_VOLUME:
-            draw_volume_screen(p);
         break;
         case CTX_SYNTH_EDIT_PARAM:
         case CTX_SYNTH_EDIT_ARG:
