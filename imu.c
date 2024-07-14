@@ -97,6 +97,13 @@ void imu_task(Imu_data * data){
     int16_t delta_accel = abs_fixed(prev_tot_accel - tot_accel);
     prev_tot_accel = tot_accel;
 
+#if defined (MPU6050_FLIP_X)
+    ax = -ax;
+#endif
+#if defined (MPU6050_FLIP_Y)
+    ay = -ay;
+#endif
+
     // X goes to pitch bending, Y goes to cutoff
 #if defined (MPU6050_SWAP_X_Y)
     data->deviation_x = map_14(ay);

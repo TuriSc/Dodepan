@@ -47,7 +47,9 @@
 #define MPU6050_SCL_DESCRIPTION     "MPU6050 SCL"
 
 #define MPU6050_ADDRESS             0x68
-#define MPU6050_SWAP_X_Y            true
+#define MPU6050_SWAP_X_Y            true // Setting all three to true because of the module
+#define MPU6050_FLIP_X              true // orientation when mounted inside the enclosure
+#define MPU6050_FLIP_Y              true
 
 #define PLUS " + "
 #define SSD1306_MPU6050_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS MPU6050_SDA_DESCRIPTION
