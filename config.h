@@ -35,6 +35,7 @@
 #define SSD1306_WIDTH               128
 #define SSD1306_HEIGHT              32
 #define SSD1306_I2C_FREQ            400 * 1000 // 400kHz
+#define SSD1306_ROTATE              true // Rotate the display by 180°
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // Note: the display and the MPU share the same I²S bus and pins

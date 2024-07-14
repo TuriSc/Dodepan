@@ -23,6 +23,9 @@
 void display_init(ssd1306_t *p) {
     p->external_vcc=false;
     ssd1306_init(p, SSD1306_WIDTH, SSD1306_HEIGHT, SSD1306_ADDRESS, SSD1306_I2C_PORT);
+#if defined (SSD1306_ROTATE)
+    ssd1306_rotate(p, 1);
+#endif
     ssd1306_clear(p);
     ssd1306_show(p);
 }
