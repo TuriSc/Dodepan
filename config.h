@@ -15,10 +15,10 @@
 
 #define ENCODER_USE_PULLUPS         true // Set to true if using a bare rotary encoder like EC11.
                                           // Set to false if you have a breakout board with external pullup resistors.
-#define ENCODER_CLK_PIN             19
-#define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
-#define ENCODER_DT_PIN              20
+#define ENCODER_DT_PIN              19
 #define ENCODER_DT_DESCRIPTION      "Encoder data pin"
+#define ENCODER_CLK_PIN             20
+#define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
 #define ENCODER_SWITCH_PIN          21
 #define ENCODER_SWITCH_DESCRIPTION  "Encoder switch"
 #define DOUBLE_CLICK_THRESHOLD_US   250*1000 // 250ms, maximum interval between two button
