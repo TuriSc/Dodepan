@@ -22,18 +22,40 @@ void mpr121_i2c_init(){
     mpr121_enable_electrodes(12, &mpr121);
 }
 
+
+// Perform a second pass of debouncing to better deal with long presses
+static bool debounced_states[12] = {false};
+static int debounce_counters[12] = {0};
+static inline bool mpr121_debounce(uint8_t i, bool is_touched) {
+    if (is_touched) { // Do not filter positive readings
+            debounced_states[i] = true;
+            debounce_counters[i] = 0;
+        } else if (!is_touched && debounced_states[i]) {
+            debounce_counters[i]++;
+            if (debounce_counters[i] >= MPR121_DEBOUNCE_THRESHOLD) {
+                debounced_states[i] = false;
+                debounce_counters[i] = 0;
+            }
+        }
+
+    return debounced_states[i];
+}
+
 void mpr121_task(){
     bool is_touched;
     static bool was_touched[12];
     for(uint8_t i=0; i<12; i++) {
         mpr121_is_touched(i, &is_touched, &mpr121);
+        is_touched = mpr121_debounce(i, is_touched);
         if (is_touched != was_touched[i]){
             if(time_us_32() < 500000) return;  // Ignore readings for half a second,
                                                // allowing the MPR121 to calibrate.
             if (is_touched){
                 trigger_note_on(get_note_by_id(i));
+                printf("on %d\n",i);
             } else {
                 trigger_note_off(get_note_by_id(i));
+                printf("off %d\n",i);
             }
             was_touched[i] = is_touched;
         }

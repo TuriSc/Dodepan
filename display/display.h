@@ -1,7 +1,7 @@
 #ifndef DISPLAY_H
 #define DISPLAY_H
 #include "pico/stdlib.h"
-#include "ssd1306.h"        // https://github.com/daschr/pico-ssd1306
+#include "ssd1306.h"
 #include "state.h"
 
 #ifdef __cplusplus

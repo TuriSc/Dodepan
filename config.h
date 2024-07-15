@@ -68,8 +68,13 @@
 #define MPR121_ADDRESS              0x5A
 #define MPR121_I2C_FREQ             400 * 1000 // 100kHz
 
-#define MPR121_TOUCH_THRESHOLD      32
-#define MPR121_RELEASE_THRESHOLD    6
+#define MPR121_TOUCH_THRESHOLD      32 // These values might have to be adjusted based on the
+#define MPR121_RELEASE_THRESHOLD    64 // size of your electrodes and their distance from the chip.
+                                       // Threshold range is 0-255. If set incorrectly, you will get
+                                       // "ghost" note_on and note_off events.
+#define MPR121_DEBOUNCE_THRESHOLD   46 // Larger values allow holding the electrode for longer without
+                                       // triggering a new note_on event, but make it harder for the
+                                       // sensor to detect quick subsequent taps
 
 /* Audio and synth */
 #define PRA32_U_MIDI_CH             0  // 0-based

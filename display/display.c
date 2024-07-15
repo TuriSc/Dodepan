@@ -5,7 +5,7 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "config.h"
-#include "ssd1306.h"        // https://github.com/daschr/pico-ssd1306
+#include "ssd1306.h"        // https://github.com/TuriSc/pico-ssd1306
 #include "state.h"
 
 // Include assets
