@@ -19,7 +19,8 @@ void looper_onpress() {
             looper_start_playback();
         break;
         case LOOP_PLAY:
-            // Stop playing and reset the playhead
+            // Stop playing
+            all_notes_off();
             looper_set_state(LOOP_READY);
         break;
         case LOOP_OFF:
