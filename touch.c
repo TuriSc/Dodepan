@@ -52,10 +52,8 @@ void mpr121_task(){
                                                // allowing the MPR121 to calibrate.
             if (is_touched){
                 trigger_note_on(get_note_by_id(i));
-                printf("on %d\n",i);
             } else {
                 trigger_note_off(get_note_by_id(i));
-                printf("off %d\n",i);
             }
             was_touched[i] = is_touched;
         }

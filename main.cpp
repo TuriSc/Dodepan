@@ -27,6 +27,7 @@ typedef uint8_t byte;
 #include "battery-check.h"
 #include "imu.h"
 #include "touch.h"
+#include "looper.h"
 #include "display/display.h"
 #include "state.h"
 
@@ -239,11 +240,19 @@ void trigger_note_on(uint8_t note) {
     uint8_t velocity = imu_data.acceleration;
 
     g_synth.note_on(note, velocity);
+    looper_record(note, velocity, true);
     // tudi_midi_write24(0, 0x90, note, velocity);
+
+    // Since a note_on event can start the looper recording,
+    // a display draw needs to be called here.
+#if defined (USE_DISPLAY)
+    display_draw(&display, state);
+#endif
 }
 
 void trigger_note_off(uint8_t note) {
     g_synth.note_off(note);
+    looper_record(note, 0, false);
     // tudi_midi_write24(0, 0x80, note, 0);
 }
 
@@ -318,6 +327,10 @@ int64_t on_long_press(alarm_id_t, void *) {
         case CTX_INFO:
             set_context(CTX_SELECTION);
         break;
+        case CTX_LOOPER:
+            looper_disable();
+            set_context(CTX_SELECTION);
+        break;
         case CTX_INIT:
         case CTX_SYNTH_EDIT_STORE:
         default:
@@ -369,6 +382,7 @@ void encoder_up() {
         break;
         case CTX_INIT:
         case CTX_INFO:
+        case CTX_LOOPER:
         default:
             ; // Do nothing
         break;
@@ -414,6 +428,8 @@ void encoder_down() {
             set_preset_slot_down();
         break;
         case CTX_INIT:
+        case CTX_INFO:
+        case CTX_LOOPER:
         default:
             ; // Do nothing
         break;
@@ -463,6 +479,10 @@ void button_onchange(button_t *button_p) {
                 case SELECTION_VOLUME:
                     set_context(CTX_VOLUME);
                 break;
+                case SELECTION_LOOPER:
+                    set_context(CTX_LOOPER);
+                    looper_enable();
+                break;
                 case SELECTION_IMU_CONFIG:
                     set_context(CTX_IMU_CONFIG);
                 break;
@@ -492,6 +512,9 @@ void button_onchange(button_t *button_p) {
             submit_preset_slot();
             set_context(CTX_SELECTION);
             set_selection(SELECTION_KEY);
+        break;
+        case CTX_LOOPER:
+            looper_onpress();
         break;
         case CTX_INIT:
         default:
@@ -619,6 +642,9 @@ int main() {
     // Initialize the touch module
     mpr121_i2c_init();
 
+    // Initialize the looper with a maximum of 512 note events
+    looper_init(512);
+
     // Initialize the rotary encoder and switch
 #if defined (ENCODER_USE_PULLUPS)
     gpio_pull_up(ENCODER_DT_PIN);
@@ -665,6 +691,7 @@ int main() {
         imu_task(&imu_data);
         tilt_process();
 #endif
+        looper_task();
         // tud_task(); // tinyusb device task
     }
 }

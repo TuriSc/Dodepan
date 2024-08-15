@@ -7,6 +7,7 @@
 #include "config.h"
 #include "ssd1306.h"        // https://github.com/TuriSc/pico-ssd1306
 #include "state.h"
+#include "looper.h"
 
 // Include assets
 #include "display_fonts.h"
@@ -17,8 +18,13 @@
 #include "icon_imu_on_y.h"
 #include "icon_imu_on_x_y.h"
 #include "icon_close.h"
+#include "icon_looper.h"
+#include "icon_rec.h"
+#include "icon_replay.h"
 #include "icon_parameters.h"
 #include "icon_low_batt.h"
+
+#define ICON_CENTERED_MARGIN_X ((SSD1306_WIDTH / 2) - (32 / 2))
 
 void display_init(ssd1306_t *p) {
     p->external_vcc=false;
@@ -59,21 +65,21 @@ static inline void draw_info_screen(ssd1306_t *p) {
     }
 }
 
-// static inline void draw_volume_screen(ssd1306_t *p){
-//     // Draw the volume bars
-//     uint8_t increments = 9; // 0 to 8
-//     uint8_t gap = (128 / increments / 4);
-//     uint8_t width = 128 / increments - gap;
+static inline void draw_looper_screen(ssd1306_t *p) {
+    ssd1306_bmp_show_image_with_offset(p, icon_looper_data, icon_looper_size, ICON_CENTERED_MARGIN_X, 0);
 
-//     for (uint8_t i = 1; i < increments; i++) {
-//         uint8_t x = i * width + i * gap;
-//         if(get_volume() >= i) {
-//             ssd1306_draw_square(p, x, 10, width, 12);
-//         } else {
-//             ssd1306_draw_empty_square(p, x, 10, width, 12);
-//         }
-//     }
-// }
+    // Rec
+    if(looper_is_recording()) {
+        ssd1306_bmp_show_image_with_offset(p, icon_rec_data, icon_rec_size, 58, 10);
+    } else if(looper_is_playing()) {
+        ssd1306_bmp_show_image_with_offset(p, icon_replay_data, icon_replay_size, 59, 10);
+    } 
+
+    // Draw selection mark
+    if(get_context() == CTX_LOOPER) {
+        ssd1306_draw_square(p, 0, 0, 2, 32);
+    }
+}
 
 static inline void draw_imu_axes_screen(ssd1306_t *p) {
     switch (get_imu_axes()) {
@@ -137,7 +143,6 @@ static inline void draw_synth_store_screen(ssd1306_t *p) {
 
 }
 
-#define ICON_CENTERED_MARGIN_X ((SSD1306_WIDTH / 2) - (32 / 2))
 void intro_animation(ssd1306_t *p, void (*callback)(void)) {
     for(uint8_t current_frame=0; current_frame < INTRO_FRAMES_NUM; current_frame++) {
         ssd1306_bmp_show_image_with_offset(p, intro_frames[current_frame], INTRO_FRAME_SIZE, ICON_CENTERED_MARGIN_X, 0);
@@ -243,6 +248,9 @@ void display_draw(ssd1306_t *p) {
                 case SELECTION_VOLUME:
                     draw_main_screen(p);
                 break;
+                case SELECTION_LOOPER:
+                    draw_looper_screen(p);
+                break;
                 case SELECTION_IMU_CONFIG:
                     draw_imu_axes_screen(p);
                 break;
@@ -257,6 +265,9 @@ void display_draw(ssd1306_t *p) {
         case CTX_INSTRUMENT:
         case CTX_VOLUME:
             draw_main_screen(p);
+        break;
+        case CTX_LOOPER:
+            draw_looper_screen(p);
         break;
         case CTX_IMU_CONFIG:
             draw_imu_axes_screen(p);
