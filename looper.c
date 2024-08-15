@@ -57,6 +57,7 @@ void looper_record(uint8_t note, uint8_t velocity, bool is_on) {
     else if (looper_is_ready()) {
         looper.rec_index = 0;
         looper.rec_start_timestamp = 0;
+        looper.loop_duration = 0;
         looper_set_state(LOOP_REC);
     }
 
