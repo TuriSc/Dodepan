@@ -2,8 +2,6 @@
 #include <stdlib.h>
 #include "looper.h"
 
-#include <stdio.h> // TODO
-
 // Declare the static looper instance
 static looper_t looper;
 
@@ -46,11 +44,9 @@ void looper_start_playback() {
     if(looper.rec_index > 1) { // At least two entries
         // Start playback
         looper_set_state(LOOP_PLAY);
-        printf("looper_start_playback: %d\t%d\n", looper.rec_index, looper.rec_start_timestamp);
     } else {
         // No note events on record
         looper_set_state(LOOP_READY);
-        printf("No note events on record\n");
     }
 }
 
@@ -81,15 +77,17 @@ void looper_task() {
     if(now - looper.play_start_timestamp > looper.loop_duration){ // Loop start or restart
         looper.play_start_timestamp = now;
         looper.play_index = 0;
-        printf("Loop start or restart\n");
     }
     // Scan for recorded events to replay
     for (uint16_t i = looper.play_index; i < looper.rec_index; i++) {
         note_event_t* event = &looper.events[i];
         // Check if it's time to replay the event
         if (now >= event->timestamp + looper.play_start_timestamp) {
-            //replay_note(event->note, event->velocity, event->is_on)
-
+            if (event->is_on) {
+                note_on(event->note, event->velocity);
+            } else {
+                note_off(event->note);
+            }
             // Increase the counter, to avoid processing events more than once
             looper.play_index++;
         }
@@ -107,7 +105,6 @@ void looper_disable() {
 }
 
 void looper_set_state(looper_state_t state) {
-    printf("looper_set_state %d\n", state);
     looper.state = state;
 }
 

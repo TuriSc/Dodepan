@@ -45,6 +45,10 @@ void looper_record(uint8_t note, uint8_t velocity, bool is_on);
 void looper_start_playback();
 void looper_task();
 
+extern void note_on(uint8_t note, uint8_t velocity);
+extern void note_off(uint8_t note);
+extern void all_notes_off();
+
 #ifdef __cplusplus
 }
 #endif

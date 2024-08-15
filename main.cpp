@@ -234,12 +234,16 @@ static const struct sound_i2s_config sound_config = {
 //     return tud_midi_stream_write(jack_id, msg, 3);
 // }
 
+void note_on(uint8_t note, uint8_t velocity) {
+    g_synth.note_on(note, velocity);
+}
+
 void trigger_note_on(uint8_t note) {
     // Set the velocity according to accelerometer data.
     // The range of velocity is 0-127, but here it's clamped to 64-127
     uint8_t velocity = imu_data.acceleration;
 
-    g_synth.note_on(note, velocity);
+    note_on(note, velocity);
     looper_record(note, velocity, true);
     // tudi_midi_write24(0, 0x90, note, velocity);
 
@@ -250,10 +254,18 @@ void trigger_note_on(uint8_t note) {
 #endif
 }
 
-void trigger_note_off(uint8_t note) {
+void note_off(uint8_t note) {
     g_synth.note_off(note);
+}
+
+void trigger_note_off(uint8_t note) {
+    note_off(note);
     looper_record(note, 0, false);
     // tudi_midi_write24(0, 0x80, note, 0);
+}
+
+void all_notes_off() {
+    g_synth.all_notes_off();
 }
 
 // Use the IMU to alter parameters according to device tilting
@@ -353,11 +365,11 @@ void encoder_up() {
         case CTX_KEY:
             // D#7 is the highest note that can be set as root note
             set_key_up();
-            g_synth.all_notes_off();
+            all_notes_off();
         break;
         case CTX_SCALE:
             set_scale_up();
-            g_synth.all_notes_off();
+            all_notes_off();
         break;
         case CTX_INSTRUMENT:
             set_instrument_up();
@@ -400,11 +412,11 @@ void encoder_down() {
         break;
         case CTX_KEY:
             set_key_down();
-            g_synth.all_notes_off();
+            all_notes_off();
         break;
         case CTX_SCALE:
             set_scale_down();
-            g_synth.all_notes_off();
+            all_notes_off();
         break;
         case CTX_INSTRUMENT:
             set_instrument_down();
