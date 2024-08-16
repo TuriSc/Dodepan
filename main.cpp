@@ -234,18 +234,25 @@ static const struct sound_i2s_config sound_config = {
 //     return tud_midi_stream_write(jack_id, msg, 3);
 // }
 
-void note_on(uint8_t note, uint8_t velocity) {
+void note_on(uint8_t id, uint8_t velocity) {
+    uint8_t note = get_note_by_id(id);
     g_synth.note_on(note, velocity);
+    // tudi_midi_write24(0, 0x90, note, velocity);
 }
 
-void trigger_note_on(uint8_t note) {
+void note_off(uint8_t id) {
+    uint8_t note = get_note_by_id(id);
+    g_synth.note_off(note);
+    // tudi_midi_write24(0, 0x80, note, 0);
+}
+
+void touch_on(uint8_t id) {
     // Set the velocity according to accelerometer data.
     // The range of velocity is 0-127, but here it's clamped to 64-127
     uint8_t velocity = imu_data.acceleration;
 
-    note_on(note, velocity);
-    looper_record(note, velocity, true);
-    // tudi_midi_write24(0, 0x90, note, velocity);
+    note_on(id, velocity);
+    looper_record(id, velocity, true);
 
     // Since a note_on event can start the looper recording,
     // a display draw needs to be called here.
@@ -254,14 +261,9 @@ void trigger_note_on(uint8_t note) {
 #endif
 }
 
-void note_off(uint8_t note) {
-    g_synth.note_off(note);
-}
-
-void trigger_note_off(uint8_t note) {
-    note_off(note);
-    looper_record(note, 0, false);
-    // tudi_midi_write24(0, 0x80, note, 0);
+void touch_off(uint8_t id) {
+    note_off(id);
+    looper_record(id, 0, false);
 }
 
 void all_notes_off() {
@@ -392,9 +394,11 @@ void encoder_up() {
         case CTX_SYNTH_EDIT_STORE:
             set_preset_slot_up();
         break;
+        case CTX_LOOPER:
+            looper_transpose_up();
+        break;
         case CTX_INIT:
         case CTX_INFO:
-        case CTX_LOOPER:
         default:
             ; // Do nothing
         break;
@@ -439,9 +443,11 @@ void encoder_down() {
         case CTX_SYNTH_EDIT_STORE:
             set_preset_slot_down();
         break;
+        case CTX_LOOPER:
+            looper_transpose_down();
+        break;
         case CTX_INIT:
         case CTX_INFO:
-        case CTX_LOOPER:
         default:
             ; // Do nothing
         break;

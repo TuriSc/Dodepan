@@ -37,12 +37,11 @@ void looper_init(uint16_t events_max) {
     looper.rec_start_timestamp = 0;
     looper.play_start_timestamp = 0;
     looper.loop_duration = 0;
+    looper.has_recording = false;
 }
 
-/* OK ABOVE */
-
 void looper_start_playback() {
-    if(looper.rec_index > 1) { // At least two entries
+    if(looper_has_recording()) {
         // Start playback
         looper_set_state(LOOP_PLAY);
     } else {
@@ -52,7 +51,7 @@ void looper_start_playback() {
 }
 
 // Record a note event
-void looper_record(uint8_t note, uint8_t velocity, bool is_on) {
+void looper_record(uint8_t id, uint8_t velocity, bool is_on) {
     if (looper_is_disabled() || looper_is_playing()) { return; }
     else if (looper_is_ready()) {
         looper.rec_index = 0;
@@ -66,11 +65,34 @@ void looper_record(uint8_t note, uint8_t velocity, bool is_on) {
         if(looper.rec_start_timestamp == 0) { looper.rec_start_timestamp = now; }
         note_event_t* event = &looper.events[looper.rec_index];
         event->timestamp = now - looper.rec_start_timestamp;
-        event->note = note;
+        event->id = id;
         event->velocity = velocity;
         event->is_on = is_on;
         looper.rec_index++;
+        // If the looper has at least two entries, turn the flag on
+        if(looper.rec_index > 1) {
+            looper.has_recording = true;
+        }
     }
+
+}
+
+void looper_transpose_up(){
+    looper.transpose++;
+    if(looper.transpose >= 12 ) { looper.transpose = 0; }
+    all_notes_off();
+}
+
+void looper_transpose_down(){
+    looper.transpose--;
+    if(looper.transpose <= -12 ) { looper.transpose = 0; }
+    all_notes_off();
+}
+
+static inline uint8_t transpose_id(uint8_t id) {
+    int16_t wrap = id + looper.transpose;
+    wrap = (wrap % 12 + 12) % 12;
+    return (uint8_t)wrap;
 }
 
 void looper_task() {
@@ -85,17 +107,18 @@ void looper_task() {
         note_event_t* event = &looper.events[i];
         // Check if it's time to replay the event
         if (now >= event->timestamp + looper.play_start_timestamp) {
+            uint8_t id = transpose_id(event->id);
             if (event->is_on) {
-                note_on(event->note, event->velocity);
+                note_on(id, event->velocity);
             } else {
-                note_off(event->note);
+                note_off(id);
             }
             // Increase the counter, to avoid processing events more than once
             looper.play_index++;
         }
 
         }
-/* OK BELOW */
+
 }
 
 void looper_enable() {
@@ -108,6 +131,12 @@ void looper_disable() {
 
 void looper_set_state(looper_state_t state) {
     looper.state = state;
+}
+
+uint8_t looper_get_transpose() {
+    int16_t wrap = looper.transpose;
+    wrap = (wrap % 12 + 12) % 12;
+    return (uint8_t)wrap;
 }
 
 bool looper_is_disabled() {
@@ -124,4 +153,8 @@ bool looper_is_recording() {
 
 bool looper_is_playing() {
     return (looper.state == LOOP_PLAY);
+}
+
+bool looper_has_recording() {
+    return (looper.has_recording);
 }

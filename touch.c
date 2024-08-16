@@ -51,9 +51,9 @@ void mpr121_task(){
             if(time_us_32() < 500000) return;  // Ignore readings for half a second,
                                                // allowing the MPR121 to calibrate.
             if (is_touched){
-                trigger_note_on(get_note_by_id(i));
+                touch_on(i);
             } else {
-                trigger_note_off(get_note_by_id(i));
+                touch_off(i);
             }
             was_touched[i] = is_touched;
         }

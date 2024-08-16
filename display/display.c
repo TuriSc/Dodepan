@@ -20,7 +20,10 @@
 #include "icon_close.h"
 #include "icon_looper.h"
 #include "icon_rec.h"
-#include "icon_replay.h"
+#include "icon_play.h"
+#include "icon_ready.h"
+#include "icon_pause.h"
+#include "icon_transpose.h"
 #include "icon_parameters.h"
 #include "icon_low_batt.h"
 
@@ -65,15 +68,48 @@ static inline void draw_info_screen(ssd1306_t *p) {
     }
 }
 
+const uint8_t transpose_coords[12][2] = {
+    {15,  1},
+    {22,  3},
+    {27,  8},
+    {29, 15},
+    {27, 22},
+    {22, 27},
+    {15, 29},
+    { 8, 27},
+    { 3, 22},
+    { 1, 15},
+    { 3,  8},
+    { 8,  3}
+};
+
 static inline void draw_looper_screen(ssd1306_t *p) {
-    ssd1306_bmp_show_image_with_offset(p, icon_looper_data, icon_looper_size, ICON_CENTERED_MARGIN_X, 0);
+    // Draw only the looper icon if in page selection mode
+    if(get_context() == CTX_SELECTION) {
+        ssd1306_bmp_show_image_with_offset(p, icon_looper_data, icon_looper_size, ICON_CENTERED_MARGIN_X, 0);
+        return;
+    }
 
     // Rec
     if(looper_is_recording()) {
         ssd1306_bmp_show_image_with_offset(p, icon_rec_data, icon_rec_size, 58, 10);
     } else if(looper_is_playing()) {
-        ssd1306_bmp_show_image_with_offset(p, icon_replay_data, icon_replay_size, 59, 10);
-    } 
+        ssd1306_bmp_show_image_with_offset(p, icon_play_data, icon_play_size, 59, 10);
+    } else {
+        if(looper_has_recording()) {
+            ssd1306_bmp_show_image_with_offset(p, icon_pause_data, icon_pause_size, 58, 10);
+        } else {
+            ssd1306_bmp_show_image_with_offset(p, icon_ready_data, icon_ready_size, 58, 10);
+        }
+    }
+
+    // Transpose
+    ssd1306_bmp_show_image_with_offset(p, icon_transpose_data, icon_transpose_size, ICON_CENTERED_MARGIN_X, 0);
+    uint8_t t = looper_get_transpose();
+
+    // Draw transposition marker
+    ssd1306_draw_square(p, ICON_CENTERED_MARGIN_X + transpose_coords[t][0],
+                                            transpose_coords[t][1], 2, 2);
 
     // Draw selection mark
     if(get_context() == CTX_LOOPER) {
