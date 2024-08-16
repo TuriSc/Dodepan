@@ -1,15 +1,15 @@
 /* Dodepan
  * An expressive electronic instrument and Midi controller built on Raspberry Pi Pico".
  * By Turi Scandurra – https://turiscandurra.com/circuits
- * v2.3.0b - 2024.07.05
+ * v2.4.0 - 2024.08.16
  */
 
-#include <stdio.h>
 #include "config.h"         // Most configurable options are here
 #include "pico/stdlib.h"
 // Arduino types added for compatibility
 typedef bool boolean;
 typedef uint8_t byte;
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/adc.h"   // Used for low battery detection
 #include "hardware/flash.h"
@@ -21,8 +21,8 @@ typedef uint8_t byte;
 #include "instrument_preset.h"
 #include "encoder.h"        // https://github.com/TuriSc/RP2040-Rotary-Encoder
 #include "button.h"         // https://github.com/TuriSc/RP2040-Button
-// #include "bsp/board.h"      // For Midi
-// #include "tusb.h"           // For Midi
+#include "bsp/board.h"      // For Midi
+#include "tusb.h"           // For Midi
 #include "scales.h"
 #include "battery-check.h"
 #include "imu.h"
@@ -197,7 +197,7 @@ void request_flash_write() {
     // Schedule writing settings to flash.
     // This delay is introduced to minimize write operations.
     if (flash_write_alarm_id) cancel_alarm(flash_write_alarm_id);
-    // TODO testing flash_write_alarm_id = add_alarm_in_ms(FLASH_WRITE_DELAY_S * 1000, write_flash_data, NULL, true);
+    flash_write_alarm_id = add_alarm_in_ms(FLASH_WRITE_DELAY_S * 1000, write_flash_data, NULL, true);
 }
 
 void submit_preset_slot() {
@@ -229,21 +229,21 @@ static const struct sound_i2s_config sound_config = {
     .samples_per_buffer = AUDIO_BUFFER_LENGTH,
 };
 
-// static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
-//     uint8_t msg[3] = { b1, b2, b3 };
-//     return tud_midi_stream_write(jack_id, msg, 3);
-// }
+static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
+    uint8_t msg[3] = { b1, b2, b3 };
+    return tud_midi_stream_write(jack_id, msg, 3);
+}
 
 void note_on(uint8_t id, uint8_t velocity) {
     uint8_t note = get_note_by_id(id);
     g_synth.note_on(note, velocity);
-    // tudi_midi_write24(0, 0x90, note, velocity);
+    tudi_midi_write24(0, 0x90, note, velocity);
 }
 
 void note_off(uint8_t id) {
     uint8_t note = get_note_by_id(id);
     g_synth.note_off(note);
-    // tudi_midi_write24(0, 0x80, note, 0);
+    tudi_midi_write24(0, 0x80, note, 0);
 }
 
 void touch_on(uint8_t id) {
@@ -285,12 +285,12 @@ void tilt_process() {
         g_synth.pitch_bend(bending_lsb, bending_msb);
     }
 
-    // static uint8_t throttle;
-    // if(throttle++ % 10 != 0) return; // Limit the message rate
+    static uint8_t throttle;
+    if(throttle++ % 10 != 0) return; // Limit the message rate
     // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
     // with 8192 (0x2000) being the center value.
     // Send the Midi message
-    // tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
+    tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
 }
 
 static void __not_in_flash_func(i2s_audio_task)(void) {
@@ -677,8 +677,8 @@ int main() {
     imu_data.deviation_y = 64;      // Center value
     imu_data.acceleration = 127;    // Max value
 
-    // board_init(); // Midi
-    // tusb_init(); // tinyusb
+    board_init(); // Midi
+    tusb_init(); // tinyusb
 
     // Use the onboard LED as a power-on indicator
     gpio_init(PICO_DEFAULT_LED_PIN);
@@ -710,6 +710,6 @@ int main() {
         tilt_process();
 #endif
         looper_task();
-        // tud_task(); // tinyusb device task
+        tud_task(); // tinyusb device task
     }
 }

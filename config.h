@@ -3,7 +3,7 @@
 
 /* Device identifiers */
 #define PROGRAM_NAME            "Dodepan"
-#define PROGRAM_VERSION         "2.3.0b"
+#define PROGRAM_VERSION         "2.4.0"
 #define PROGRAM_DESCRIPTION     "Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out."
 #define PROGRAM_URL             "https://turiscandurra.com/circuits"
 #define USB_STR_MANUFACTURER    "TuriScandurra"
