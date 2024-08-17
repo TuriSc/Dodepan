@@ -21,8 +21,8 @@ typedef uint8_t byte;
 #include "instrument_preset.h"
 #include "encoder.h"        // https://github.com/TuriSc/RP2040-Rotary-Encoder
 #include "button.h"         // https://github.com/TuriSc/RP2040-Button
-#include "bsp/board.h"      // For Midi
-#include "tusb.h"           // For Midi
+#include "bsp/board_api.h"  // For TinyUSB Midi
+#include "tusb.h"           // For TinyUSB Midi
 #include "scales.h"
 #include "battery-check.h"
 #include "imu.h"
@@ -597,6 +597,14 @@ int main() {
 
     bi_decl_all();
 
+    // Enable Midi device functionality
+    board_init();
+    tud_init(BOARD_TUD_RHPORT);
+
+    if (board_init_after_tusb) {
+        board_init_after_tusb();
+    }
+
     // Initialize display and IMU (sharing an I²C bus)
 #if defined (USE_DISPLAY) || defined (USE_IMU)
     gpio_init(SSD1306_SDA_PIN);
@@ -676,9 +684,6 @@ int main() {
     imu_data.deviation_x = 0x2000;  // Center value
     imu_data.deviation_y = 64;      // Center value
     imu_data.acceleration = 127;    // Max value
-
-    board_init(); // Midi
-    tusb_init(); // tinyusb
 
     // Use the onboard LED as a power-on indicator
     gpio_init(PICO_DEFAULT_LED_PIN);
