@@ -126,6 +126,7 @@ void looper_enable() {
 }
 
 void looper_disable() {
+    all_notes_off();
     looper_set_state(LOOP_OFF);
 }
 
