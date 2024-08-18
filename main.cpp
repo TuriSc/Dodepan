@@ -283,14 +283,14 @@ void tilt_process() {
     // Send the instruction to the synth
     if(get_imu_axes() & 0x01) {
         g_synth.pitch_bend(bending_lsb, bending_msb);
-    }
 
-    static uint8_t throttle;
-    if(throttle++ % 10 != 0) return; // Limit the message rate
-    // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
-    // with 8192 (0x2000) being the center value.
-    // Send the Midi message
-    tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
+        static uint8_t throttle;
+        if(throttle++ % 10 != 0) return; // Limit the message rate
+        // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
+        // with 8192 (0x2000) being the center value.
+        // Send the Midi message
+        tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
+    }
 }
 
 static void __not_in_flash_func(i2s_audio_task)(void) {
