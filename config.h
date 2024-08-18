@@ -21,8 +21,7 @@
 #define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
 #define ENCODER_SWITCH_PIN          21
 #define ENCODER_SWITCH_DESCRIPTION  "Encoder switch"
-#define DOUBLE_CLICK_THRESHOLD_US   250*1000 // 250ms, maximum interval between two button
-                                             // presses to trigger a double-click
+#define LONG_PRESS_THRESHOLD        1000 // amount of ms to hold the button to trigger a long press
 
 /* SSD1306 Display */
 #define USE_DISPLAY

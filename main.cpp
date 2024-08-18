@@ -477,7 +477,7 @@ void button_onchange(button_t *button_p) {
     button_t *button = (button_t*)button_p;
     if (long_press_alarm_id) cancel_alarm(long_press_alarm_id);
     if (button->state) return; // Ignore button release
-    long_press_alarm_id = add_alarm_in_ms(1000, on_long_press, NULL, true);
+    long_press_alarm_id = add_alarm_in_ms(LONG_PRESS_THRESHOLD, on_long_press, NULL, true);
 
     context_t context = get_context();
     selection_t selection = get_selection();
