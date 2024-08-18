@@ -79,10 +79,10 @@ const uint8_t dodepan_preset[] = {
      64, // OSC_2_PITCH - +0, keep tuning sharp
      80, // MIXER_OSC_MIX - Favor OSC_2
         
-     90, // FILTER_CUTOFF - Emphasize midrange frequencies
-     90, // FILTER_RESO - Add a gentle pinch to the sound
-     60, // FILTER_EG_AMT - Swell lightly, like a handpan
-     127, // FILTER_KEY_TRK - Max key tracking
+     80, // FILTER_CUTOFF - Emphasize midrange frequencies
+    105, // FILTER_RESO - Add a gentle pinch to the sound
+     56, // FILTER_EG_AMT - Swell lightly, like a handpan
+    127, // FILTER_KEY_TRK - Max key tracking
         
       8, // EG_ATTACK - Quick attack
      90, // EG_DECAY - Allow the filter to open a bit
@@ -95,13 +95,13 @@ const uint8_t dodepan_preset[] = {
       0, // PORTAMENTO - Omit portamento to preserve sound clarity
         
       1, // LFO_WAVE - Sine wave
-     16, // LFO_RATE - A slow rate for subtle wavering effect
-     20, // LFO_DEPTH - Just enough to add some variation
+     24, // LFO_RATE - A slow rate for subtle wavering effect
+     48, // LFO_DEPTH - Just enough to add some variation
       0, // LFO_FADE_TIME - No fade
         
-     64, // LFO_OSC_AMT - Add a touch of vibrato
+     64, // LFO_OSC_AMT - No effect
       0, // LFO_OSC_DST - Omit LFO modulation of the oscillator's destination
-     88, // LFO_FILTER_AMT - Very light LFO modulation of the filter
+    110, // LFO_FILTER_AMT - Moderate LFO modulation of the filter
     127, // AMP_GAIN - Maximize the amplifier's gain
         
       8, // AMP_ATTACK - Quick attack
@@ -125,7 +125,7 @@ const uint8_t dodepan_preset[] = {
         
         
     127, // DELAY_FEEDBACK - 49.6%
-     12, // DELAY_TIME - 20 ms
+      0, // DELAY_TIME - 0 ms
       1, // DELAY_MODE - Ping Pong Delay
 };
 
