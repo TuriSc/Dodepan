@@ -25,6 +25,10 @@ Everything is powered by a 3.7V li-ion battery, recharged by a TP4056 module via
 
 ![Dodepan circuit](images/dodepan-02.jpg)
 
+### Installation
+Pre-compiled builds for Raspberry Pi Pico (RP2040) and Raspberry Pi Pico 2 (RP2350) are provided, they're in [/dist](dist).
+Assuming you didn't make any changes to the circuit, you can simply flash the correct firmware. If, on the other hand, you need to change your configuration, you'll have to build the project from these sources.
+
 ### Configuration and building
 It's important to check the file config.h and make sure you have enabled the modules you intend to use and disable the ones you don't.
 Specifically, comment out the lines defining either USE_POTS or USE_BUTTONS according to your setup.
