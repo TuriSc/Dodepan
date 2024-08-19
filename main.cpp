@@ -711,8 +711,10 @@ int main() {
         mpr121_task();
 
 #if defined (USE_IMU)
-        imu_task(&imu_data);
-        tilt_process();
+        if(get_imu_axes() > 0) {
+            imu_task(&imu_data);
+            tilt_process();
+        }
 #endif
         looper_task();
         tud_task(); // tinyusb device task
