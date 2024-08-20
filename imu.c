@@ -38,14 +38,14 @@ void imu_init(){
         mpu6050_set_dhpf_mode(&mpu6050, MPU6050_DHPF_2_5HZ);
         mpu6050_set_dlpf_mode(&mpu6050, MPU6050_DLPF_3);
 
-        // We're not calibrating the IMU at startup, and we're not fusing gyro and accelerometer data
-        // to account for gravitational compensation. Turns out it's not really necessary as
-        // we only need a rough estimate of the device orientation and acceleration.
+        mpu6050_set_accelerometer_measuring(&mpu6050, true);
+
+        // We're not calibrating the IMU on Pico RP2040, and we're not fusing gyro and accelerometer data
+        // to account for gravitational compensation.
     }
 }
 
-// Overriding rpi-pico-mpu6050 library methods
-// for minimal, fixed-point calculations.
+// Overriding rpi-pico-mpu6050 library methods for minimal, fixed-point calculations
 void read_raw_accel_fixed(struct mpu6050 *self) {
     struct i2c_information *i2c = &self->i2c;
     uint8_t data[6];
@@ -78,7 +78,7 @@ int16_t map_14(int16_t value) {
     return (result < 0) ? 0 : (result > 16383) ? 16383 : result;
 }
 
-void imu_task(Imu_data * data){
+void imu_task(Imu_data * data) {
     read_raw_accel_fixed(&mpu6050);
     struct mpu6050_vector16 *accel = &mpu6050.ra;
 
@@ -104,14 +104,15 @@ void imu_task(Imu_data * data){
     ay = -ay;
 #endif
 
-    // X goes to pitch bending, Y goes to cutoff
 #if defined (MPU6050_SWAP_X_Y)
-    data->deviation_x = map_14(ay);
-    data->deviation_y = map_7(LPF_MIN + ax);
-#else
+    int16_t temp = ax;
+    ax = ay;
+    ay = temp;
+#endif
+
+    // X goes to pitch bending, Y goes to cutoff
     data->deviation_x = map_14(ax);
     data->deviation_y = map_7(LPF_MIN + ay);
-#endif
 
     // Acceleration goes to velocity
     data->acceleration = (map_7(delta_accel * VELOCITY_MULTIPLIER));
