@@ -91,7 +91,11 @@ const uint8_t dodepan_preset[] = {
         
      64, // EG_OSC_AMT - No effect
       0, // EG_OSC_DST - Not in use
+#ifdef BOARD_IS_PICO2
       0, // VOICE_MODE - Polyphonic (LFO Single Trigger)
+#else
+      2, // VOICE_MODE - Monophonic
+#endif
       0, // PORTAMENTO - Omit portamento to preserve sound clarity
         
       1, // LFO_WAVE - Sine wave
