@@ -1,5 +1,12 @@
 // Scale data from https://github.com/Air-Craft/MusicalLib
 
+#ifndef SCALES_H
+#define SCALES_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define NUM_SCALES_BUILTIN  16
 #define NUM_SCALES NUM_SCALES_BUILTIN + NUM_SCALE_SLOTS
 static const uint8_t scales[NUM_SCALES][12] = {
@@ -22,3 +29,9 @@ static const uint8_t scales[NUM_SCALES][12] = {
 };
 
 extern uint8_t **user_scales;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif
