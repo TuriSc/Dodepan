@@ -24,7 +24,7 @@
 #include "icon_ready.h"
 #include "icon_pause.h"
 #include "icon_transpose.h"
-#include "icon_parameters.h"
+// #include "icon_parameters.h" // Unused asset
 #include "icon_low_batt.h"
 
 #define ICON_CENTERED_MARGIN_X ((SSD1306_WIDTH / 2) - (32 / 2))
@@ -241,15 +241,6 @@ void intro_animation(ssd1306_t *p, void (*callback)(void)) {
     callback();
 }
 
-void draw_menu_title_screen(ssd1306_t *p) {
-     selection_t selection = get_selection();
-        switch (selection) {
-            case SELECTION_SYNTH_EDIT:
-                ssd1306_bmp_show_image_with_offset(p, icon_parameters_data, icon_parameters_size, 49, 6);
-            break;
-        }
-}
-
 #define OFFSET_X    32
 #define CHAR_W      7 // Includes spacing
 static inline void draw_main_screen(ssd1306_t *p) {
@@ -345,9 +336,6 @@ void display_draw(ssd1306_t *p) {
                 break;
                 case SELECTION_IMU_CONFIG:
                     draw_imu_axes_screen(p);
-                break;
-                case SELECTION_SYNTH_EDIT:
-                    draw_menu_title_screen(p);
                 break;
             }
             break;

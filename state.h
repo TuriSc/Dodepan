@@ -30,7 +30,6 @@ typedef enum selection {
     SELECTION_VOLUME,
     SELECTION_LOOPER,
     SELECTION_IMU_CONFIG,
-    SELECTION_SYNTH_EDIT,
     SELECTION_LAST,
 } selection_t;
 

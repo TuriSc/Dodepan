@@ -512,10 +512,13 @@ int64_t on_long_press(alarm_id_t, void *) {
                 }
         break;
         case CTX_KEY:
-        case CTX_INSTRUMENT:
         case CTX_VOLUME:
         case CTX_IMU_CONFIG:
             set_context(CTX_SELECTION);
+        break;
+        case CTX_INSTRUMENT:
+            set_context(CTX_SYNTH_EDIT_PARAM);
+            update_argument_from_parameter(get_parameter());
         break;
         case CTX_SCALE:
             set_context(CTX_SCALE_EDIT_STEP);
@@ -580,10 +583,6 @@ void button_onchange(button_t *button_p) {
                 case SELECTION_IMU_CONFIG:
                     set_context(CTX_IMU_CONFIG);
                 break;
-                case SELECTION_SYNTH_EDIT:
-                    set_context(CTX_SYNTH_EDIT_PARAM);
-                    update_argument_from_parameter(get_parameter());
-                break;
             }
         }
         break;
@@ -605,7 +604,7 @@ void button_onchange(button_t *button_p) {
         case CTX_SYNTH_EDIT_STORE:
             submit_preset_slot();
             set_context(CTX_SELECTION);
-            set_selection(SELECTION_KEY);
+            set_selection(SELECTION_INSTRUMENT);
         break;
         case CTX_LOOPER:
             looper_onpress();
