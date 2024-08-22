@@ -15,10 +15,12 @@ typedef enum context {
     CTX_VOLUME,
     CTX_LOOPER,
     CTX_IMU_CONFIG,
-    CTX_SYNTH_EDIT_TITLE,
     CTX_SYNTH_EDIT_PARAM,
     CTX_SYNTH_EDIT_ARG,
     CTX_SYNTH_EDIT_STORE,
+    CTX_SCALE_EDIT_STEP,
+    CTX_SCALE_EDIT_DEG,
+    CTX_SCALE_EDIT_STORE,
 } context_t;
 
 typedef enum selection {
@@ -46,10 +48,18 @@ typedef struct state {
                                     // according to its current context
     selection_t selection;
     uint8_t volume;
+
+    // Instrument presets
     uint8_t parameter;
     uint8_t argument;
     int8_t preset_slot;
-    bool preset_has_changes;
+    bool preset_has_changes;        // Used to determine whether a flash write is required
+
+    // Custom scales
+    int8_t scale_slot;
+    bool scale_has_changes;         // Used to determine whether a flash write is required
+    bool scale_unsaved;             // Only used to manage the scale display name
+    uint8_t step;
 
     uint8_t imu_axes;               // Determines what the IMU is controlling:
                                     // 0x0 - no effect
@@ -71,11 +81,12 @@ void set_key_down();
 
 uint8_t get_scale();
 void set_scale(uint8_t scale);
+void set_and_extend_scale(uint8_t scale);
 void set_scale_up();
 void set_scale_down();
 
 uint8_t get_extended_scale(uint8_t index);
-void set_extended_scale(uint8_t index, uint8_t note);
+void set_extended_scale(uint8_t index, uint8_t degree);
 
 uint8_t get_instrument();
 void set_instrument(uint8_t instrument);
@@ -126,9 +137,27 @@ int8_t get_preset_slot();
 void set_preset_slot(int8_t slot);
 void set_preset_slot_up();
 void set_preset_slot_down();
-
 bool get_preset_has_changes();
 void set_preset_has_changes(bool flag);
+
+int8_t get_scale_slot();
+void set_scale_slot(int8_t slot);
+void set_scale_slot_up();
+void set_scale_slot_down();
+bool get_scale_has_changes();
+void set_scale_has_changes(bool flag);
+bool get_scale_unsaved();
+void set_scale_unsaved(bool flag);
+
+uint8_t get_step();
+void set_step(uint8_t step);
+void set_step_up();
+void set_step_down();
+
+uint8_t get_degree(uint8_t step);
+void set_degree(uint8_t step, uint8_t degree);
+void set_degree_up();
+void set_degree_down();
 
 #ifdef __cplusplus
 }

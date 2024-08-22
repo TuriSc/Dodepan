@@ -46,28 +46,14 @@ void set_key_down() {
 
 /* Scale and extended scale*/
 
-#define NUM_SCALES sizeof(scales)/sizeof(scales[0])
-
 static inline uint8_t get_scale_size(uint8_t scale) {
+    // If it's a custom scale, the size is always 12
+    if(scale >= NUM_SCALES_BUILTIN) { return 12; }
     // Find the first zero element and return its index
     for (uint8_t i=1; i<12; i++) {
         if (scales[scale][i] == 0) { return i; }
     }
     return 12;
-}
-
-// Compute the extended scale
-static inline void update_extended_scale() {
-    uint8_t scale_size = get_scale_size(get_scale());
-    uint8_t j = 0;
-    uint8_t octave_shift = 0;
-    for (uint8_t i=0; i<12; i++) {
-        uint8_t note = scales[get_scale()][j] + octave_shift;
-        set_extended_scale(i, note);
-        j++;
-        // Repeat the scale on higher octaves to fill all the available positions
-        if (j >= scale_size) { j=0; octave_shift += 12; }
-    }
 }
 
 uint8_t get_scale() {
@@ -76,14 +62,33 @@ uint8_t get_scale() {
 
 void set_scale(uint8_t scale) {
     state.scale = scale;
-    update_extended_scale();
 }
+
+void set_and_extend_scale(uint8_t scale) {
+    set_scale(scale);
+    // Compute the extended scale
+    uint8_t scale_size = get_scale_size(scale);
+    uint8_t j = 0;
+    uint8_t octave_shift = 0;
+    // Making the pointer constant as we're mixing constant and variable arrays
+    const uint8_t *ptr = (scale < NUM_SCALES_BUILTIN ? scales[scale] : user_scales[scale - NUM_SCALES_BUILTIN]);
+
+    for (uint8_t i=0; i<12; i++) {
+        uint8_t degree = ptr[j];
+        degree += octave_shift;
+        set_extended_scale(i, degree);
+        j++;
+        // Repeat the scale on higher octaves to fill all the available positions
+        if (j >= scale_size) { j=0; octave_shift += 12; }
+    }
+};
 
 void set_scale_up() {
     uint8_t scale = get_scale();
     if(scale < NUM_SCALES - 1) {
         scale++;
-        set_scale(scale);
+        set_and_extend_scale(scale);
+        set_scale_unsaved(false);
     }
 }
 
@@ -91,7 +96,8 @@ void set_scale_down() {
     uint8_t scale = get_scale();
     if(scale > 0) {
         scale--;
-        set_scale(scale);
+        set_and_extend_scale(scale);
+        set_scale_unsaved(false);
     }
 }
 
@@ -99,8 +105,8 @@ uint8_t get_extended_scale(uint8_t index) {
     return state.extended_scale[index];
 }
 
-void set_extended_scale(uint8_t index, uint8_t note) {
-    state.extended_scale[index] = note;
+void set_extended_scale(uint8_t index, uint8_t degree) {
+    state.extended_scale[index] = degree;
 }
 
 /* Instrument */
@@ -313,20 +319,19 @@ void set_argument_down() {
     set_argument(argument);
 }
 
-/* Preset slot */
+/* Instrument presets */
 int8_t get_preset_slot() {
     return state.preset_slot;
 }
 
 void set_preset_slot(int8_t slot) {
-    int8_t preset_slot = slot;
-    state.preset_slot = preset_slot;
+    state.preset_slot = slot;
 }
 
 void set_preset_slot_up() {
     int8_t preset_slot = get_preset_slot();
     // Do not wrap around
-    if (preset_slot < NUM_PRESET_SLOTS) {
+    if (preset_slot < NUM_PRESET_SLOTS - 1) {
         preset_slot++;
     }
     set_preset_slot(preset_slot);
@@ -347,4 +352,109 @@ bool get_preset_has_changes() {
 
 void set_preset_has_changes(bool flag) {
     state.preset_has_changes = flag;
+}
+
+/* User scales */
+int8_t get_scale_slot() {
+    return state.scale_slot;
+}
+
+void set_scale_slot(int8_t slot) {
+    state.scale_slot = slot;
+}
+
+void set_scale_slot_up() {
+    int8_t scale_slot = get_scale_slot();
+    // Do not wrap around
+    if (scale_slot < NUM_SCALE_SLOTS - 1) {
+        scale_slot++;
+    }
+    set_scale_slot(scale_slot);
+}
+
+void set_scale_slot_down() {
+    int8_t scale_slot = get_scale_slot();
+    // Do not wrap around
+    if (scale_slot > -1) {
+        scale_slot--;
+    }
+    set_scale_slot(scale_slot);
+}
+
+bool get_scale_has_changes() {
+    return state.scale_has_changes;
+}
+
+void set_scale_has_changes(bool flag) {
+    state.scale_has_changes = flag;
+}
+
+bool get_scale_unsaved() {
+    return state.scale_unsaved;
+}
+
+void set_scale_unsaved(bool flag) {
+    state.scale_unsaved = flag;
+}
+
+uint8_t get_step() {
+    return state.step;
+}
+
+void set_step(uint8_t step) {
+    // Clip value
+    if (step > 11) {
+        step = 11;
+    }
+    state.step = step;
+}
+
+void set_step_up() {
+    uint8_t step = get_step() + 1;
+    // Wrap around
+    if (step > 11) {
+        step = 11;
+    }
+    set_step(step);
+}
+
+void set_step_down() {
+    uint8_t step = get_step() - 1;
+    // Do not wrap around
+    if (step > 11) {
+        step = 0;
+    }
+    set_step(step);
+}
+
+uint8_t get_degree(uint8_t step) {
+    return state.extended_scale[step];
+}
+
+void set_degree(uint8_t step, uint8_t degree) {
+    // Clip value
+    if (degree > 24) {
+        degree = 24;
+    }
+    state.extended_scale[step] = degree;
+}
+
+void set_degree_up() {
+    uint8_t step = get_step();
+    uint8_t degree = get_degree(step) + 1;
+    // Wrap around
+    if (degree > 24) {
+        degree = 24;
+    }
+    set_degree(step, degree);
+}
+
+void set_degree_down() {
+    uint8_t step = get_step();
+    uint8_t degree = get_degree(step) - 1;
+    // Do not wrap around
+    if (degree > 24) {
+        degree = 0;
+    }
+    set_degree(step, degree);
 }

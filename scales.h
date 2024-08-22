@@ -1,6 +1,8 @@
 // Scale data from https://github.com/Air-Craft/MusicalLib
 
-static const uint8_t scales[16][12] = {
+#define NUM_SCALES_BUILTIN  16
+#define NUM_SCALES NUM_SCALES_BUILTIN + NUM_SCALE_SLOTS
+static const uint8_t scales[NUM_SCALES][12] = {
     {0,2,4,5,7,9,11},   // MAJOR; IONIAN
     {0,2,3,5,7,8,10},   // NATURAL_MINOR; AEOLIAN
     {0,2,3,5,7,8,11},   // HARMONIC_MINOR
@@ -18,3 +20,5 @@ static const uint8_t scales[16][12] = {
     {0,1,5,7,8},        // JAPANESE
     {0,1,2,3,4,5,6,7,8,9,10,11}, // CHROMATIC
 };
+
+extern uint8_t **user_scales;

@@ -34,7 +34,11 @@ const char *scale_names[] = {
     "Arabian",
     "Oriental",
     "Japanese",
-    "Chromatic"
+    "Chromatic",
+    "Custom 1",
+    "Custom 2",
+    "Custom 3",
+    "Custom 4",
 };
 
 const char *octave_names[] = {

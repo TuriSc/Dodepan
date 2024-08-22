@@ -40,6 +40,7 @@ state_t* state;
 Imu_data imu_data;
 
 uint8_t **user_presets;
+uint8_t **user_scales;
 
 #if defined (USE_DISPLAY)
 ssd1306_t display;
@@ -61,6 +62,14 @@ static inline void update_argument_from_parameter(uint8_t parameter) {
     uint8_t control_number = dodepan_program_parameters[parameter];
     uint8_t argument = g_synth.current_controller_value(control_number);
     set_argument(argument);
+}
+
+static inline void update_degree() {
+    uint8_t step = get_step();
+    uint8_t degree = get_degree(step);
+    set_extended_scale(step, degree);
+    set_scale_unsaved(true); // Used when the user modifies a scale but does not save it,
+                             // and the name of the scale must be changed to "Custom"
 }
 
 void load_user_preset(uint8_t instrument) {
@@ -113,29 +122,35 @@ bool load_flash_data() { // Only called at startup
     }
     
     if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99)                   || // Validate key
-       (stored_data[MAGIC_NUMBER_LENGTH + 1] > 15)                   || // Validate scale
+       (stored_data[MAGIC_NUMBER_LENGTH + 1] > NUM_SCALES -1)        || // Validate scale
        (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8 + NUM_PRESET_SLOTS) || // Validate instrument
        (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03)                 || // Validate IMU configuration
-       (stored_data[MAGIC_NUMBER_LENGTH + 3] > 8)                       // Validate volume
+       (stored_data[MAGIC_NUMBER_LENGTH + 4] > 8)                       // Validate volume
     ) { return false; } // Invalid data
 
     // Data is valid and can be loaded safely
-    set_key(       stored_data[MAGIC_NUMBER_LENGTH + 0]);
-    set_scale(     stored_data[MAGIC_NUMBER_LENGTH + 1]);
-    set_instrument(stored_data[MAGIC_NUMBER_LENGTH + 2]);
-    set_imu_axes(  stored_data[MAGIC_NUMBER_LENGTH + 3]);
-    set_volume(    stored_data[MAGIC_NUMBER_LENGTH + 4]);
+    set_key(             stored_data[MAGIC_NUMBER_LENGTH + 0]);
+    uint8_t scale =      stored_data[MAGIC_NUMBER_LENGTH + 1] ;
+    set_instrument(      stored_data[MAGIC_NUMBER_LENGTH + 2]);
+    set_imu_axes(        stored_data[MAGIC_NUMBER_LENGTH + 3]);
+    set_volume(          stored_data[MAGIC_NUMBER_LENGTH + 4]);
 
     // Load user presets
     uint8_t offset = MAGIC_NUMBER_LENGTH + 5;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
         for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
             user_presets[i][j] = stored_data[offset++];
         }
     }
-
-    // Load instrument data
     sync_instrument();
+
+    // Load user scales
+    for (uint8_t i = 0; i < NUM_SCALE_SLOTS; i++) {
+        for (uint8_t j = 0; j < 12; j++) {
+            user_scales[i][j] = stored_data[offset++];
+        }
+    }
+    set_and_extend_scale(scale);
 
     return true;
 }
@@ -159,13 +174,21 @@ int64_t write_flash_data(alarm_id_t, void *) {
         stored_data[MAGIC_NUMBER_LENGTH + 2] == flash_buffer[MAGIC_NUMBER_LENGTH + 2] &&
         stored_data[MAGIC_NUMBER_LENGTH + 3] == flash_buffer[MAGIC_NUMBER_LENGTH + 3] &&
         stored_data[MAGIC_NUMBER_LENGTH + 4] == flash_buffer[MAGIC_NUMBER_LENGTH + 4] &&
-        get_preset_has_changes() == false) { return 0; }
+        get_preset_has_changes() == false &&
+        get_scale_has_changes()  == false) { return 0; }
 
     // Add user presets to the write buffer
     uint8_t offset = MAGIC_NUMBER_LENGTH + 5;
-    for (uint8_t i = 0; i < 4; i++) {
+    for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
         for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
             flash_buffer[offset++] = user_presets[i][j];
+        }
+    }
+
+    // Add user scales to the write buffer
+    for (uint8_t i = 0; i < NUM_SCALE_SLOTS; i++) {
+        for (uint8_t j = 0; j < 12; j++) {
+            flash_buffer[offset++] = user_scales[i][j];
         }
     }
 
@@ -184,8 +207,9 @@ int64_t write_flash_data(alarm_id_t, void *) {
     // Restart processes on core1
     multicore_launch_core1(core1_main);
 
-    // Wash "dirty" flag
+    // Wash "dirty" flags
     set_preset_has_changes(false);
+    set_scale_has_changes(false);
 
     // Turn off built-in LED
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
@@ -210,7 +234,23 @@ void submit_preset_slot() {
     request_flash_write();
 
     // Since we've written a preset, let's select it on the main screen
-    set_instrument( 9 + slot);
+    set_instrument(9 + slot);
+}
+
+void submit_scale_slot() {
+    int8_t slot = get_scale_slot();
+    if(slot == -1) { return; }
+    for (uint8_t i = 0; i < 12; i++) {
+        user_scales[slot][i] = get_extended_scale(i);
+    }
+    set_scale_has_changes(true);
+    set_scale_unsaved(false); // Used when the user modifies a scale but does not save it,
+                              // and the name of the scale must be changed to "Custom"
+
+    request_flash_write();
+
+    // Since we've written a scale, let's select it on the main screen
+    set_scale(NUM_SCALES_BUILTIN + slot);
 }
 
 /* Note and audio */
@@ -322,42 +362,6 @@ void intro_complete() {
 
 /* I/O functions */
 
-int64_t on_long_press(alarm_id_t, void *) {
-    switch(get_context()) {
-        case CTX_SELECTION:
-            set_context(CTX_INFO);
-        break;
-        case CTX_KEY:
-        case CTX_SCALE:
-        case CTX_INSTRUMENT:
-        case CTX_VOLUME:
-        case CTX_IMU_CONFIG:
-            set_context(CTX_SELECTION);
-        break;
-        case CTX_SYNTH_EDIT_PARAM:
-        case CTX_SYNTH_EDIT_ARG:
-            set_context(CTX_SYNTH_EDIT_STORE);
-        break;
-        case CTX_INFO:
-            set_context(CTX_SELECTION);
-        break;
-        case CTX_LOOPER:
-            looper_disable();
-            set_context(CTX_SELECTION);
-        break;
-        case CTX_INIT:
-        case CTX_SYNTH_EDIT_STORE:
-        default:
-            ; // Do nothing
-        break;
-    }
-
-#if defined (USE_DISPLAY)
-    display_draw(&display, state);
-#endif
-    return 0;
-}
-
 void encoder_up() {
     context_t context = get_context();
     switch (context) {
@@ -396,6 +400,16 @@ void encoder_up() {
         break;
         case CTX_LOOPER:
             looper_transpose_up();
+        break;
+        case CTX_SCALE_EDIT_STEP:
+            set_step_up();
+        break;
+        case CTX_SCALE_EDIT_DEG:
+            set_degree_up();
+            update_degree();
+        break;
+        case CTX_SCALE_EDIT_STORE:
+            set_scale_slot_up();
         break;
         case CTX_INIT:
         case CTX_INFO:
@@ -446,6 +460,16 @@ void encoder_down() {
         case CTX_LOOPER:
             looper_transpose_down();
         break;
+        case CTX_SCALE_EDIT_STEP:
+            set_step_down();
+        break;
+        case CTX_SCALE_EDIT_DEG:
+            set_degree_down();
+            update_degree();
+        break;
+        case CTX_SCALE_EDIT_STORE:
+            set_scale_slot_down();
+        break;
         case CTX_INIT:
         case CTX_INFO:
         default:
@@ -471,6 +495,58 @@ void encoder_onchange(rotary_encoder_t *encoder) {
     } else if (direction == -1) {
         encoder_down();
     }
+}
+
+int64_t on_long_press(alarm_id_t, void *) {
+    context_t context = get_context();
+    selection_t selection = get_selection();
+    switch(context) {
+        case CTX_SELECTION:
+            switch (selection) {
+                case SELECTION_SCALE:
+                    set_context(CTX_SCALE_EDIT_STEP);
+                break;
+                default:
+                    set_context(CTX_INFO);
+                break;
+                }
+        break;
+        case CTX_KEY:
+        case CTX_INSTRUMENT:
+        case CTX_VOLUME:
+        case CTX_IMU_CONFIG:
+            set_context(CTX_SELECTION);
+        break;
+        case CTX_SCALE:
+            set_context(CTX_SCALE_EDIT_STEP);
+        break;
+        case CTX_SCALE_EDIT_STEP:
+        case CTX_SCALE_EDIT_DEG:
+            set_context(CTX_SCALE_EDIT_STORE);
+        break;
+        case CTX_SYNTH_EDIT_PARAM:
+        case CTX_SYNTH_EDIT_ARG:
+            set_context(CTX_SYNTH_EDIT_STORE);
+        break;
+        case CTX_INFO:
+            set_context(CTX_SELECTION);
+        break;
+        case CTX_LOOPER:
+            looper_disable();
+            set_context(CTX_SELECTION);
+        break;
+        case CTX_INIT:
+        case CTX_SYNTH_EDIT_STORE:
+        case CTX_SCALE_EDIT_STORE:
+        default:
+            ; // Do nothing
+        break;
+    }
+
+#if defined (USE_DISPLAY)
+    display_draw(&display, state);
+#endif
+    return 0;
 }
 
 void button_onchange(button_t *button_p) {
@@ -533,6 +609,17 @@ void button_onchange(button_t *button_p) {
         break;
         case CTX_LOOPER:
             looper_onpress();
+        break;
+        case CTX_SCALE_EDIT_STEP:
+            set_context(CTX_SCALE_EDIT_DEG);
+        break;
+        case CTX_SCALE_EDIT_DEG:
+            set_context(CTX_SCALE_EDIT_STEP);
+        break;
+        case CTX_SCALE_EDIT_STORE:
+            submit_scale_slot();
+            set_context(CTX_SELECTION);
+            set_selection(SELECTION_SCALE);
         break;
         case CTX_INIT:
         default:
@@ -636,12 +723,19 @@ int main() {
     set_context(CTX_INIT);
     set_low_batt(false);
     set_preset_slot(-1); // No slot selected
+    set_scale_slot(-1);  // No slot selected
     set_preset_has_changes(false);
+    set_scale_has_changes(false);
 
-    // Allocate memory for the user presets array
-    user_presets = (uint8_t **)malloc(4 * sizeof(uint8_t *));
-    for (uint8_t i = 0; i < 4; i++) {
+    // Allocate memory for the user presets and scales arrays
+    user_presets = (uint8_t **)malloc(NUM_PRESET_SLOTS * sizeof(uint8_t *));
+    for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
         user_presets[i] = (uint8_t *)malloc(PROGRAM_PARAMS_NUM * sizeof(uint8_t));
+    }
+
+    user_scales = (uint8_t **)malloc(NUM_SCALE_SLOTS * sizeof(uint8_t *));
+    for (uint8_t i = 0; i < NUM_SCALE_SLOTS; i++) {
+        user_scales[i] = (uint8_t *)malloc(12 * sizeof(uint8_t));
     }
 
     // Attempt to load previous settings, if stored on flash
@@ -649,15 +743,22 @@ int main() {
     if(!data_loaded) {
         // Settings not loaded, initialize state with default values
         set_key(48); // C3
-        set_scale(0); // Major
+        set_and_extend_scale(0); // Major
+        set_scale_unsaved(false);
         set_instrument(0); // Dodepan custom preset
         sync_instrument();
         set_imu_axes(0x3); // Both effects are active
         set_volume(8); // Max value
         // Copy the custom preset to the four user preset slots
-        for (uint8_t i = 0; i < 4; i++) {
+        for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
             for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
                 user_presets[i][j] = dodepan_preset[j];
+            }
+        }
+        // Set all user scales to chromatic
+        for (uint8_t i = 0; i < NUM_SCALE_SLOTS; i++) {
+            for (uint8_t j = 0; j < 12; j++) {
+                user_scales[i][j] = j;
             }
         }
     }

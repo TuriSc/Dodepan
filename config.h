@@ -100,4 +100,5 @@
 #define MAGIC_NUMBER_LENGTH         4
 #define FLASH_WRITE_DELAY_S         10  // To minimize flash operations, delay writing by this amount of seconds
 #define NUM_PRESET_SLOTS            4
+#define NUM_SCALE_SLOTS             4
 #endif /* CONFIG_H_ */

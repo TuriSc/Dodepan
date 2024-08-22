@@ -166,17 +166,69 @@ static inline void draw_synth_store_screen(ssd1306_t *p) {
     int8_t slot = get_preset_slot();
 
     uint8_t position = slot + 1;
+
+    ssd1306_draw_string(p, 0, 0, 1, "Store preset in slot:");
+
     // Close icon
     ssd1306_bmp_show_image_with_offset(p, icon_close_data, icon_close_size, 8, 11);
 
-    ssd1306_draw_string_with_font(p,  34, 11, 1, octave_font, "1");
-    ssd1306_draw_string_with_font(p,  60, 11, 1, octave_font, "2");
-    ssd1306_draw_string_with_font(p,  86, 11, 1, octave_font, "3");
-    ssd1306_draw_string_with_font(p, 112, 11, 1, octave_font, "4");
+    ssd1306_draw_string_with_font(p,  34, 12, 1, octave_font, "1");
+    ssd1306_draw_string_with_font(p,  60, 12, 1, octave_font, "2");
+    ssd1306_draw_string_with_font(p,  86, 12, 1, octave_font, "3");
+    ssd1306_draw_string_with_font(p, 112, 12, 1, octave_font, "4");
     
     // Underline
     ssd1306_draw_square(p, 8 + 26 * position, 25, 12, 2);
+}
 
+static inline void draw_scale_edit_screen(ssd1306_t *p) {
+    uint8_t spacing = 18;
+    uint8_t line_height = 11;
+    uint8_t margin = 2;
+    ssd1306_draw_string(p, 0, 0, 1, "Edit scale");
+
+    char str[2];
+    for (uint8_t i = 0; i < 6; i++) {
+        sprintf(str, "%d", get_degree(i) + 1);
+        ssd1306_draw_string(p, margin + i * spacing, line_height, 1, str);
+    }
+
+    for (uint8_t i = 0; i < 6; i++) {
+        sprintf(str, "%d", get_degree(i+6) + 1);
+        ssd1306_draw_string(p, margin + i * spacing, line_height*2, 1, str);
+    }
+
+    uint8_t step = get_step();
+    uint8_t newline = (step >= 6);
+    uint8_t x = step * spacing;
+    if(newline) { x -= 6 * spacing; }
+    uint8_t y = 8 + line_height + line_height * newline;
+
+    if(get_context() == CTX_SCALE_EDIT_STEP) {
+        ssd1306_draw_square(p, margin + x, y, 11, 2);
+    } else { // CTX_SCALE_EDIT_DEG
+        ssd1306_draw_empty_square(p, x, y-line_height, 15, 11);
+    }
+}
+
+// If you changed NUM_SCALE_SLOTS in config.h you will have to adjust this function accordingly
+static inline void draw_scale_store_screen(ssd1306_t *p) {
+    int8_t slot = get_scale_slot();
+
+    uint8_t position = slot + 1;
+
+    ssd1306_draw_string(p, 0, 0, 1, "Store scale in slot:");
+
+    // Close icon
+    ssd1306_bmp_show_image_with_offset(p, icon_close_data, icon_close_size, 8, 11);
+
+    ssd1306_draw_string_with_font(p,  34, 12, 1, octave_font, "1");
+    ssd1306_draw_string_with_font(p,  60, 12, 1, octave_font, "2");
+    ssd1306_draw_string_with_font(p,  86, 12, 1, octave_font, "3");
+    ssd1306_draw_string_with_font(p, 112, 12, 1, octave_font, "4");
+    
+    // Underline
+    ssd1306_draw_square(p, 8 + 26 * position, 25, 12, 2);
 }
 
 void intro_animation(ssd1306_t *p, void (*callback)(void)) {
@@ -207,7 +259,11 @@ static inline void draw_main_screen(ssd1306_t *p) {
     ssd1306_draw_string_with_font(p, 15, 16, 1, octave_font, octave_names[get_octave()]);
 
     // Scale
-    ssd1306_draw_string_with_font(p, OFFSET_X, 4, 1, spaced_font, scale_names[get_scale()]);
+    if (get_scale_unsaved()) {
+        ssd1306_draw_string_with_font(p, OFFSET_X, 4, 1, spaced_font, "Custom");
+    } else {
+        ssd1306_draw_string_with_font(p, OFFSET_X, 4, 1, spaced_font, scale_names[get_scale()]);
+    }
     uint8_t scale_name_width = strlen(scale_names[get_scale()]);
     if (scale_name_width > 12) { scale_name_width = 12; }
 
@@ -314,6 +370,13 @@ void display_draw(ssd1306_t *p) {
         break;
         case CTX_SYNTH_EDIT_STORE:
             draw_synth_store_screen(p);
+        break;
+        case CTX_SCALE_EDIT_STEP:
+        case CTX_SCALE_EDIT_DEG:
+            draw_scale_edit_screen(p);
+        break;
+        case CTX_SCALE_EDIT_STORE:
+            draw_scale_store_screen(p);
         break;
         case CTX_INFO:
             draw_info_screen(p);
