@@ -747,7 +747,7 @@ int main() {
         set_scale_unsaved(false);
         set_instrument(0); // Dodepan custom preset
         update_instrument();
-        set_imu_axes(0x3); // Both effects are active
+        set_imu_axes(0x02); // Filter cutoff modulation enabled, pitch bending disabled
         set_volume(8); // Max value
         // Copy the custom preset to the four user preset slots
         for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
