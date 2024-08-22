@@ -86,7 +86,7 @@ static inline void sync_control_change() {
     g_synth.control_change(control_number, argument);
 }
 
-void sync_instrument() {
+void update_instrument() {
     uint8_t instrument = get_instrument();
     switch (instrument) {
         case 0: // Load custom Dodepan preset
@@ -142,7 +142,7 @@ bool load_flash_data() { // Only called at startup
             user_presets[i][j] = stored_data[offset++];
         }
     }
-    sync_instrument();
+    update_instrument();
 
     // Load user scales
     for (uint8_t i = 0; i < NUM_SCALE_SLOTS; i++) {
@@ -379,7 +379,7 @@ void encoder_up() {
         break;
         case CTX_INSTRUMENT:
             set_instrument_up();
-            sync_instrument();
+            update_instrument();
         break;
         case CTX_IMU_CONFIG:
             set_imu_axes_up();
@@ -438,7 +438,7 @@ void encoder_down() {
         break;
         case CTX_INSTRUMENT:
             set_instrument_down();
-            sync_instrument();
+            update_instrument();
         break;
         case CTX_IMU_CONFIG:
             set_imu_axes_down();
@@ -746,7 +746,7 @@ int main() {
         set_and_extend_scale(0); // Major
         set_scale_unsaved(false);
         set_instrument(0); // Dodepan custom preset
-        sync_instrument();
+        update_instrument();
         set_imu_axes(0x3); // Both effects are active
         set_volume(8); // Max value
         // Copy the custom preset to the four user preset slots
