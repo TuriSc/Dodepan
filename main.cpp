@@ -742,7 +742,7 @@ int main() {
     bool data_loaded = load_flash_data();
     if(!data_loaded) {
         // Settings not loaded, initialize state with default values
-        set_key(48); // C3
+        set_key(60); // C4
         set_and_extend_scale(0); // Major
         set_scale_unsaved(false);
         set_instrument(0); // Dodepan custom preset
