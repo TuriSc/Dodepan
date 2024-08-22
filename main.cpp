@@ -121,7 +121,7 @@ bool load_flash_data() { // Only called at startup
         if(stored_data[i] != magic[i]){ return false; } // Invalid data
     }
     
-    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > 99)                   || // Validate key
+    if((stored_data[MAGIC_NUMBER_LENGTH + 0] > HIGHEST_KEY)          || // Validate key
        (stored_data[MAGIC_NUMBER_LENGTH + 1] > NUM_SCALES -1)        || // Validate scale
        (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8 + NUM_PRESET_SLOTS) || // Validate instrument
        (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03)                 || // Validate IMU configuration

@@ -30,7 +30,7 @@ void set_key(uint8_t key) {
 
 void set_key_up() {
     uint8_t key = get_key();
-    if(key < 99) {
+    if(key < HIGHEST_KEY) {
         key++;
         set_key(key);
     }

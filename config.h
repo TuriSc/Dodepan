@@ -91,7 +91,7 @@
 // The third required connection is GPIO 1 -> I2S LRCK (BCK+1)
 
 #define LPF_MIN                     64 // Lowest filter cutoff frequency on a 0-127 scale.
-                                       // Affects the Dodepan preset only.
+#define HIGHEST_KEY                 99 // Highest note that can be set as root note
 
 /* Flash memory */
 // Reserve the last 4KB of the default 2MB flash for persistence.
