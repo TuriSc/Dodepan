@@ -14,6 +14,55 @@ mpu6050_t mpu6050;
 #define FIXED_POINT_BITS 16
 #define FIXED_POINT_SCALE (1 << FIXED_POINT_BITS)
 
+#define PEAK_HOLD_WINDOW        10
+
+typedef struct {
+    int16_t peak;
+    int16_t window[PEAK_HOLD_WINDOW];
+    int8_t window_index;
+    int8_t reset_value;
+    int8_t reset_counter;
+} peak_hold_state_t;
+
+peak_hold_state_t peak_hold;
+
+void peak_hold_init(peak_hold_state_t *state) {
+    state->peak = 0;
+    for (int i = 0; i < PEAK_HOLD_WINDOW; i++) {
+        state->window[i] = 0;
+    }
+    state->window_index = 0;
+    state->reset_value = VELOCITY_HOLD_SAMPLES;
+    state->reset_counter = 0;
+}
+
+void peak_hold_update(peak_hold_state_t *state, int16_t value) {
+    state->window[state->window_index] = value;
+    state->window_index = (state->window_index + 1) % PEAK_HOLD_WINDOW;
+
+    // Find maximum value in window
+    int16_t max_value = state->window[0];
+    for (int i = 1; i < PEAK_HOLD_WINDOW; i++) {
+        if (state->window[i] > max_value) {
+            max_value = state->window[i];
+        }
+    }
+
+    // Update peak if new maximum is higher
+    if (max_value > state->peak) {
+        state->peak = max_value;
+    }
+
+    // Reset the peak after the timeout
+    if (++state->reset_counter == state->reset_value) {
+        peak_hold_init(state);
+    }
+}
+
+int16_t peak_hold_get(peak_hold_state_t *state) {
+    return state->peak;
+}
+
 inline int16_t mul_fixed(int16_t a, int16_t b) {
     return (a * b) >> FIXED_POINT_BITS;
 }
@@ -43,6 +92,8 @@ void imu_init(){
         // We're not calibrating the IMU on Pico RP2040, and we're not fusing gyro and accelerometer data
         // to account for gravitational compensation.
     }
+
+    peak_hold_init(&peak_hold);
 }
 
 // Overriding rpi-pico-mpu6050 library methods for minimal, fixed-point calculations
@@ -97,6 +148,8 @@ void imu_task(Imu_data * data) {
     int16_t delta_accel = abs_fixed(prev_tot_accel - tot_accel);
     prev_tot_accel = tot_accel;
 
+    peak_hold_update(&peak_hold, delta_accel);
+
 #if defined (MPU6050_FLIP_X)
     ax = -ax;
 #endif
@@ -115,5 +168,5 @@ void imu_task(Imu_data * data) {
     data->deviation_y = map_7(LPF_MIN + ay);
 
     // Acceleration goes to velocity
-    data->acceleration = (map_7(delta_accel * VELOCITY_MULTIPLIER));
+    data->acceleration = (map_7(peak_hold_get(&peak_hold) * VELOCITY_MULTIPLIER));
 }

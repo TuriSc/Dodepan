@@ -54,9 +54,6 @@
 #define SSD1306_MPU6050_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS MPU6050_SDA_DESCRIPTION
 #define SSD1306_MPU6050_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION PLUS MPU6050_SCL_DESCRIPTION
 
-#define VELOCITY_MULTIPLIER         8 // Higher values yield higher velocity, but
-                                      // lower the dynamic range.
-
 /* MPR121 */
 #define MPR121_I2C_PORT             i2c0
 #define MPR121_SDA_PIN              4 // i2c0
@@ -74,6 +71,10 @@
 #define MPR121_DEBOUNCE_THRESHOLD   46 // Larger values allow holding the electrode for longer without
                                        // triggering a new note_on event, but make it harder for the
                                        // sensor to detect quick subsequent taps
+
+#define VELOCITY_HOLD_SAMPLES       127 // How long to hold the peak value from accelerometer data.
+#define VELOCITY_MULTIPLIER         4   // Higher values yield higher velocity, but
+                                        // lower the dynamic range.
 
 /* Audio and synth */
 #define PRA32_U_MIDI_CH             0  // 0-based
