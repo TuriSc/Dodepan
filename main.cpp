@@ -324,12 +324,14 @@ void tilt_process() {
     if(get_imu_axes() & 0x01) {
         g_synth.pitch_bend(bending_lsb, bending_msb);
 
+#if defined (USE_MIDI)
         static uint8_t throttle;
         if(throttle++ % 10 != 0) return; // Limit the message rate
         // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
         // with 8192 (0x2000) being the center value.
         // Send the Midi message
         tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
+#endif
     }
 }
 
@@ -683,6 +685,7 @@ int main() {
 
     bi_decl_all();
 
+#if defined (USE_MIDI)
     // Enable Midi device functionality
     board_init();
     tud_init(BOARD_TUD_RHPORT);
@@ -690,6 +693,7 @@ int main() {
     if (board_init_after_tusb) {
         board_init_after_tusb();
     }
+#endif
 
     // Initialize display and IMU (sharing an I²C bus)
 #if defined (USE_DISPLAY) || defined (USE_IMU)
@@ -817,6 +821,8 @@ int main() {
         }
 #endif
         looper_task();
+#if defined (USE_MIDI)
         tud_task(); // tinyusb device task
     }
+#endif
 }
