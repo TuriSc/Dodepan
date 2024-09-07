@@ -2,26 +2,26 @@
 #define CONFIG_H_
 
 /* Device identifiers */
-#define PROGRAM_NAME            "Dodepan"
-#define PROGRAM_VERSION         "2.4.0"
-#define PROGRAM_DESCRIPTION     "Digital musical instrument. Touch-enabled, with multiple tunings, pitch bending and Midi out."
-#define PROGRAM_URL             "https://turiscandurra.com/circuits"
-#define USB_STR_MANUFACTURER    "TuriScandurra"
-#define USB_STR_PRODUCT         "Dodepan"
+#define PROGRAM_NAME                "Dodepan"
+#define PROGRAM_VERSION             "2.4.1"
+#define PROGRAM_DESCRIPTION         "Portable musical instrument and MIDI controller"
+#define PROGRAM_URL                 "https://turiscandurra.com/circuits"
+#define USB_STR_MANUFACTURER        "TuriScandurra"
+#define USB_STR_PRODUCT             "Dodepan"
 
 /* I/O */
 #define BATT_LVL_PIN                29
 #define BATT_LVL_DESCRIPTION        "Battery sensing pin"
 
 #define ENCODER_USE_PULLUPS         true // Set to true if using a bare rotary encoder like EC11.
-                                          // Set to false if you have a breakout board with external pullup resistors.
-#define ENCODER_DT_PIN              19
+                                         // Set to false if you have a breakout board with external pullup resistors.
+#define ENCODER_DT_PIN              18
 #define ENCODER_DT_DESCRIPTION      "Encoder data pin"
-#define ENCODER_CLK_PIN             20
+#define ENCODER_CLK_PIN             19
 #define ENCODER_CLK_DESCRIPTION     "Encoder clock pin"
 #define ENCODER_SWITCH_PIN          21
 #define ENCODER_SWITCH_DESCRIPTION  "Encoder switch"
-#define LONG_PRESS_THRESHOLD        1000 // amount of ms to hold the button to trigger a long press
+#define LONG_PRESS_THRESHOLD        1000 // Amount of ms to hold the button to trigger a long press
 
 /* SSD1306 Display */
 #define USE_DISPLAY
@@ -29,15 +29,15 @@
 #define SSD1306_SDA_PIN             6 // i2c1
 #define SSD1306_SDA_DESCRIPTION     "SSD1306 SDA"
 #define SSD1306_SCL_PIN             7 // i2c1
-#define SSD1306_SCL_DESCRIPTION     "SSD1306 SCL" // SCL or SCK
+#define SSD1306_SCL_DESCRIPTION     "SSD1306 SCL" // Labeled SCL or SCK
 #define SSD1306_ADDRESS             0x3C
 #define SSD1306_WIDTH               128
 #define SSD1306_HEIGHT              32
 #define SSD1306_I2C_FREQ            400 * 1000 // 400kHz
-#define SSD1306_ROTATE              true // Rotate the display by 180°
+// #define SSD1306_ROTATE           // Rotate the display by 180°
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
-// Note: the display and the MPU share the same I²S bus and pins
+// Note: the display and the MPU share the same I²C bus and pins
 #define USE_IMU                     // The IMU is optional, but gives you velocity and bending
 #define MPU6050_I2C_PORT            i2c1
 #define MPU6050_SDA_PIN             SSD1306_SDA_PIN
@@ -93,6 +93,8 @@
 
 #define LPF_MIN                     64 // Lowest filter cutoff frequency on a 0-127 scale.
 #define HIGHEST_KEY                 99 // Highest note that can be set as root note
+
+#define USE_MIDI                    // Remove this line to disable Midi output
 
 /* Flash memory */
 // Reserve the last 4KB of the default 2MB flash for persistence.
