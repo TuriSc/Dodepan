@@ -823,6 +823,6 @@ int main() {
         looper_task();
 #if defined (USE_MIDI)
         tud_task(); // tinyusb device task
-    }
 #endif
+    }
 }
