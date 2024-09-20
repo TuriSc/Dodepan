@@ -710,8 +710,7 @@ int main() {
     gpio_init(SSD1306_SCL_PIN);
     gpio_set_function(SSD1306_SDA_PIN, GPIO_FUNC_I2C);
     gpio_set_function(SSD1306_SCL_PIN, GPIO_FUNC_I2C);
-    // Due to erratum RP2350-E9 this will cause issues on RP2350
-    // External pullup resistors are required (2.2KΩ recommended)
+    // External pullup resistors are required (2.2KΩ to 4.7KΩ recommended)
     // gpio_pull_up(SSD1306_SDA_PIN);
     // gpio_pull_up(SSD1306_SCL_PIN);
 
