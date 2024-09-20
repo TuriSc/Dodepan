@@ -508,12 +508,21 @@ int64_t on_long_press(alarm_id_t, void *) {
                 case SELECTION_SCALE:
                     set_context(CTX_SCALE_EDIT_STEP);
                 break;
-                default:
+                case SELECTION_KEY:
                     set_context(CTX_INFO);
+                break;
+                case SELECTION_INSTRUMENT:
+                    set_context(CTX_SYNTH_EDIT_PARAM);
+                    update_argument_from_parameter(get_parameter());
+                break;
+                default:
+                    // Do nothing
                 break;
                 }
         break;
         case CTX_KEY:
+            set_context(CTX_INFO);
+        break;
         case CTX_VOLUME:
         case CTX_IMU_CONFIG:
             set_context(CTX_SELECTION);
