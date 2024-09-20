@@ -10,6 +10,8 @@ mpu6050_t mpu6050;
 
 // The lack of an FPU on the Pico makes it hard to process IMU data on the fly
 // while also running the synth and i/o. We'll have to resort to fixed-point math.
+// The default resolution of the IMU is too high for this application anyway.
+// Pico 2 does have an FPU but can use the same simplified math.
 
 #define FIXED_POINT_BITS 16
 #define FIXED_POINT_SCALE (1 << FIXED_POINT_BITS)
