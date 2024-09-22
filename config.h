@@ -78,6 +78,7 @@
 
 /* Audio and synth */
 #define PRA32_U_MIDI_CH             0  // 0-based
+#define g_midi_ch                   PRA32_U_MIDI_CH // Required for compatibility with PRA32-U library
 
 #define AUDIO_BUFFER_LENGTH         64
 #define SOUND_OUTPUT_FREQUENCY      48000
