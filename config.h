@@ -35,6 +35,8 @@
 #define SSD1306_HEIGHT              32
 #define SSD1306_I2C_FREQ            400 * 1000 // 400kHz
 // #define SSD1306_ROTATE           // Rotate the display by 180°
+#define DISPLAY_DIM_DELAY           5   // Seconds since last UI interaction for the screen
+                                        // to be dimmed when constrast is set to AUTO
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // Note: the display and the MPU share the same I²C bus and pins

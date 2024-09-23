@@ -13,6 +13,7 @@ typedef enum context {
     CTX_SCALE,
     CTX_INSTRUMENT,
     CTX_VOLUME,
+    CTX_CONTRAST,
     CTX_LOOPER,
     CTX_IMU_CONFIG,
     CTX_SYNTH_EDIT_PARAM,
@@ -47,6 +48,7 @@ typedef struct state {
                                     // according to its current context
     selection_t selection;
     uint8_t volume;
+    uint8_t contrast;               // Value to control the SSD1306 display brightness (aka "contrast")
 
     // Instrument presets
     uint8_t parameter;
@@ -118,6 +120,11 @@ uint8_t get_volume();
 void set_volume(uint8_t volume);
 void set_volume_up();
 void set_volume_down();
+
+uint8_t get_contrast();
+void set_contrast(uint8_t contrast);
+void set_contrast_up();
+void set_contrast_down();
 
 bool get_low_batt();
 void set_low_batt(bool low_batt);

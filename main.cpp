@@ -125,7 +125,8 @@ bool load_flash_data() { // Only called at startup
        (stored_data[MAGIC_NUMBER_LENGTH + 1] > NUM_SCALES -1)        || // Validate scale
        (stored_data[MAGIC_NUMBER_LENGTH + 2] > 8 + NUM_PRESET_SLOTS) || // Validate instrument
        (stored_data[MAGIC_NUMBER_LENGTH + 3] > 0x03)                 || // Validate IMU configuration
-       (stored_data[MAGIC_NUMBER_LENGTH + 4] > 8)                       // Validate volume
+       (stored_data[MAGIC_NUMBER_LENGTH + 4] > 8)                    || // Validate volume
+       (stored_data[MAGIC_NUMBER_LENGTH + 5] > CONTRAST_AUTO)           // Validate contrast
     ) { return false; } // Invalid data
 
     // Data is valid and can be loaded safely
@@ -134,9 +135,10 @@ bool load_flash_data() { // Only called at startup
     set_instrument(      stored_data[MAGIC_NUMBER_LENGTH + 2]);
     set_imu_axes(        stored_data[MAGIC_NUMBER_LENGTH + 3]);
     set_volume(          stored_data[MAGIC_NUMBER_LENGTH + 4]);
+    set_contrast(        stored_data[MAGIC_NUMBER_LENGTH + 5]);
 
     // Load user presets
-    uint8_t offset = MAGIC_NUMBER_LENGTH + 5;
+    uint8_t offset = MAGIC_NUMBER_LENGTH + 12;
     for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
         for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
             user_presets[i][j] = stored_data[offset++];
@@ -152,10 +154,14 @@ bool load_flash_data() { // Only called at startup
     }
     set_and_extend_scale(scale);
 
+#if defined (USE_DISPLAY)
+    display_update_contrast(&display);
+#endif
+
     return true;
 }
 
-int64_t write_flash_data(alarm_id_t, void *) {
+int64_t write_flash_data(alarm_id_t id, void *) {
     // Initialize the buffer with a signature
     uint8_t flash_buffer[FLASH_PAGE_SIZE] = MAGIC_NUMBER;
     uint8_t index = MAGIC_NUMBER_LENGTH;
@@ -166,6 +172,7 @@ int64_t write_flash_data(alarm_id_t, void *) {
     flash_buffer[MAGIC_NUMBER_LENGTH + 2] = get_instrument();
     flash_buffer[MAGIC_NUMBER_LENGTH + 3] = get_imu_axes();
     flash_buffer[MAGIC_NUMBER_LENGTH + 4] = get_volume();
+    flash_buffer[MAGIC_NUMBER_LENGTH + 5] = get_contrast();
 
     // Stop here if the stored data is the same as what we're about to write
     const uint8_t *stored_data = (const uint8_t *) (XIP_BASE + FLASH_TARGET_OFFSET);
@@ -174,11 +181,14 @@ int64_t write_flash_data(alarm_id_t, void *) {
         stored_data[MAGIC_NUMBER_LENGTH + 2] == flash_buffer[MAGIC_NUMBER_LENGTH + 2] &&
         stored_data[MAGIC_NUMBER_LENGTH + 3] == flash_buffer[MAGIC_NUMBER_LENGTH + 3] &&
         stored_data[MAGIC_NUMBER_LENGTH + 4] == flash_buffer[MAGIC_NUMBER_LENGTH + 4] &&
+        stored_data[MAGIC_NUMBER_LENGTH + 5] == flash_buffer[MAGIC_NUMBER_LENGTH + 5] &&
         get_preset_has_changes() == false &&
         get_scale_has_changes()  == false) { return 0; }
 
+    // Reserving bytes MAGIC_NUMBER_LENGTH + [6-11] for future firmware versions
+
     // Add user presets to the write buffer
-    uint8_t offset = MAGIC_NUMBER_LENGTH + 5;
+    uint8_t offset = MAGIC_NUMBER_LENGTH + 12;
     for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
         for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
             flash_buffer[offset++] = user_presets[i][j];
@@ -297,7 +307,7 @@ void touch_on(uint8_t id) {
     // Since a note_on event can start the looper recording,
     // a display draw needs to be called here.
 #if defined (USE_DISPLAY)
-    display_draw(&display, state);
+    display_draw(&display);
 #endif
 }
 
@@ -353,7 +363,7 @@ static void __not_in_flash_func(i2s_audio_task)(void) {
     }
 }
 
-int64_t power_on_complete(alarm_id_t, void *) {
+int64_t power_on_complete(alarm_id_t id, void *) {
     gpio_put(PICO_DEFAULT_LED_PIN, 0);
     return 0;
 }
@@ -389,6 +399,12 @@ void encoder_up() {
         case CTX_VOLUME:
             set_volume_up();
         break;
+        case CTX_CONTRAST:
+            set_contrast_up();
+#if defined (USE_DISPLAY)
+            display_update_contrast(&display);
+#endif
+        break;
         case CTX_SYNTH_EDIT_PARAM:
             set_parameter_up();
             update_argument_from_parameter(get_parameter());
@@ -420,7 +436,10 @@ void encoder_up() {
         break;
     }
 #if defined (USE_DISPLAY)
-    display_draw(&display, state);
+    if(get_contrast() == CONTRAST_AUTO) {
+        display_wake(&display);
+    }
+    display_draw(&display);
 #endif
 }
 
@@ -447,6 +466,12 @@ void encoder_down() {
         break;
         case CTX_VOLUME:
             set_volume_down();
+        break;
+        case CTX_CONTRAST:
+            set_contrast_down();
+#if defined (USE_DISPLAY)
+            display_update_contrast(&display);
+#endif
         break;
         case CTX_SYNTH_EDIT_PARAM:
             set_parameter_down();
@@ -479,7 +504,10 @@ void encoder_down() {
         break;
     }
 #if defined (USE_DISPLAY)
-    display_draw(&display, state);
+    if(get_contrast() == CONTRAST_AUTO) {
+        display_wake(&display);
+    }
+    display_draw(&display);
 #endif
 }
 
@@ -499,7 +527,7 @@ void encoder_onchange(rotary_encoder_t *encoder) {
     }
 }
 
-int64_t on_long_press(alarm_id_t, void *) {
+int64_t on_long_press(alarm_id_t id, void *) {
     context_t context = get_context();
     selection_t selection = get_selection();
     switch(context) {
@@ -524,6 +552,9 @@ int64_t on_long_press(alarm_id_t, void *) {
             set_context(CTX_INFO);
         break;
         case CTX_VOLUME:
+            set_context(CTX_CONTRAST);
+        break;
+        case CTX_CONTRAST:
         case CTX_IMU_CONFIG:
             set_context(CTX_SELECTION);
         break;
@@ -558,7 +589,7 @@ int64_t on_long_press(alarm_id_t, void *) {
     }
 
 #if defined (USE_DISPLAY)
-    display_draw(&display, state);
+    display_draw(&display);
 #endif
     return 0;
 }
@@ -602,6 +633,7 @@ void button_onchange(button_t *button_p) {
         case CTX_SCALE:
         case CTX_INSTRUMENT:
         case CTX_VOLUME:
+        case CTX_CONTRAST:
         case CTX_IMU_CONFIG:
             set_context(CTX_SELECTION);
             request_flash_write();
@@ -637,7 +669,10 @@ void button_onchange(button_t *button_p) {
         break;
     }
 #if defined (USE_DISPLAY)
-    display_draw(&display, state);
+    if(get_contrast() == CONTRAST_AUTO) {
+        display_wake(&display);
+    }
+    display_draw(&display);
 #endif
 }
 
@@ -762,6 +797,10 @@ int main() {
         update_instrument();
         set_imu_axes(0x02); // Filter cutoff modulation enabled, pitch bending disabled
         set_volume(8); // Max value
+        set_contrast(CONTRAST_MED); // Medium display brightness
+#if defined (USE_DISPLAY)
+        display_update_contrast(&display);
+#endif
         // Copy the custom preset to the four user preset slots
         for (uint8_t i = 0; i < NUM_PRESET_SLOTS; i++) {
             for (uint8_t j = 0; j < PROGRAM_PARAMS_NUM; j++) {
@@ -814,7 +853,7 @@ int main() {
     // Show a short intro animation. This will distract the user
     // while the hardware is calibrating
     intro_animation(&display, intro_complete);
-    display_draw(&display, state);
+    display_draw(&display);
 #else
     // Since there's no intro animation without a display,
     // let's trigger the new state manually

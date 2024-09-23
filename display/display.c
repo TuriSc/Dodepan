@@ -8,11 +8,15 @@
 #include "ssd1306.h"        // https://github.com/TuriSc/pico-ssd1306
 #include "state.h"
 #include "looper.h"
+#include "display.h"
 
 // Include assets
 #include "display_fonts.h"
 #include "display_strings.h"
 #include "intro.h"
+#include "icon_contrast_max.h"
+#include "icon_contrast_med.h"
+#include "icon_contrast_min.h"
 #include "icon_imu_off.h"
 #include "icon_imu_on_x.h"
 #include "icon_imu_on_y.h"
@@ -28,6 +32,8 @@
 #include "icon_low_batt.h"
 
 #define ICON_CENTERED_MARGIN_X ((SSD1306_WIDTH / 2) - (32 / 2))
+
+static alarm_id_t display_dim_alarm_id;
 
 void display_init(ssd1306_t *p) {
     p->external_vcc=false;
@@ -137,6 +143,29 @@ static inline void draw_imu_axes_screen(ssd1306_t *p) {
     if(get_context() == CTX_IMU_CONFIG) {
         ssd1306_draw_square(p, 0, 0, 2, 32);
     }
+}
+
+static inline void draw_contrast_screen(ssd1306_t *p) {
+    uint8_t contrast = get_contrast();
+    switch (contrast) {
+        case CONTRAST_MIN:
+            ssd1306_bmp_show_image_with_offset(p, icon_contrast_min_data, icon_contrast_min_size, 48, 0);
+        break;
+        case CONTRAST_MED:
+            ssd1306_bmp_show_image_with_offset(p, icon_contrast_med_data, icon_contrast_med_size, 48, 0);
+        break;
+        case CONTRAST_MAX:
+            ssd1306_bmp_show_image_with_offset(p, icon_contrast_max_data, icon_contrast_max_size, 48, 0);
+        break;
+        case CONTRAST_AUTO:
+            ssd1306_bmp_show_image_with_offset(p, icon_contrast_max_data, icon_contrast_max_size, 48, 0);
+            ssd1306_clear_square(p, 48, 11, 32, 10);
+            ssd1306_draw_string(p, 53, 13, 1, "AUTO");
+        break;
+    }
+
+    // Draw selection mark
+    ssd1306_draw_square(p, 0, 0, 2, 32);
 }
 
 static inline void draw_synth_edit_screen(ssd1306_t *p) {
@@ -316,6 +345,39 @@ static inline void draw_main_screen(ssd1306_t *p) {
     }
 }
 
+void display_dim(ssd1306_t *p) {
+    ssd1306_contrast(p, 0);
+}
+
+int64_t display_dim_callback(alarm_id_t id, void * p) {
+    display_dim(p);
+}
+
+void display_wake(ssd1306_t *p) {
+    ssd1306_contrast(p, 255);
+    if (display_dim_alarm_id) cancel_alarm(display_dim_alarm_id);
+    display_dim_alarm_id = add_alarm_in_ms(DISPLAY_DIM_DELAY * 1000, display_dim_callback, p, true);
+}
+
+void display_update_contrast(ssd1306_t *p) {
+    if (display_dim_alarm_id) cancel_alarm(display_dim_alarm_id);
+    uint8_t contrast = get_contrast();
+    switch (contrast) {
+        case CONTRAST_MIN:
+            ssd1306_contrast(p, 0);
+        break;
+        case CONTRAST_MED:
+            ssd1306_contrast(p, 127);
+        break;
+        case CONTRAST_MAX:
+            ssd1306_contrast(p, 255);
+        break;
+        case CONTRAST_AUTO:
+            display_wake(p);
+        break;
+    }
+}
+
 void display_draw(ssd1306_t *p) {
     selection_t selection = get_selection();
     context_t context = get_context();
@@ -345,6 +407,9 @@ void display_draw(ssd1306_t *p) {
         case CTX_INSTRUMENT:
         case CTX_VOLUME:
             draw_main_screen(p);
+        break;
+        case CTX_CONTRAST:
+            draw_contrast_screen(p);
         break;
         case CTX_LOOPER:
             draw_looper_screen(p);

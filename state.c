@@ -241,6 +241,34 @@ void set_volume_down() {
     set_volume(volume);
 }
 
+/* Contrast */
+// 0 - minimum contrast
+// 1 - medium contrast
+// 2 - maximum contrast
+// 3 - automatic dimming
+
+uint8_t get_contrast() {
+    return state.contrast;
+}
+
+void set_contrast(uint8_t contrast) {
+    state.contrast = contrast;
+}
+
+void set_contrast_up() {
+    uint8_t contrast = get_contrast();
+    if(contrast < 3) {
+        set_contrast(contrast + 1);
+    }
+}
+
+void set_contrast_down() {
+    uint8_t contrast = get_contrast();
+    if(contrast > 0) {
+        set_contrast(contrast - 1);
+    }
+}
+
 /* Low batt */
 
 bool get_low_batt() {
