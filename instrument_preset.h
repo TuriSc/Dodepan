@@ -100,7 +100,7 @@ const uint8_t dodepan_preset[] = {
         
       1, // LFO_WAVE - Sine wave
      24, // LFO_RATE - A slow rate for subtle wavering effect
-     48, // LFO_DEPTH - Just enough to add some variation
+      8, // LFO_DEPTH - Just enough to add some variation
       0, // LFO_FADE_TIME - No fade
         
      64, // LFO_OSC_AMT - No effect
