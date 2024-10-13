@@ -221,24 +221,21 @@ uint8_t get_volume() {
 }
 
 void set_volume(uint8_t vol) {
-    uint8_t volume = vol;
-    // Clip values
-    if (volume < 1) {
-        volume = 1;
-    } else if (volume > 8) {
-        volume = 8;
-    }
-    state.volume = volume;
+    state.volume = vol;
 }
 
 void set_volume_up() {
-    uint8_t volume = get_volume() + 1;
-    set_volume(volume);
+    uint8_t volume = get_volume();
+    if (volume < 8) {
+        set_volume(volume + 1);
+    }
 }
 
 void set_volume_down() {
-    uint8_t volume = get_volume() - 1;
-    set_volume(volume);
+    uint8_t volume = get_volume();
+    if (volume > 0) {
+        set_volume(volume - 1);
+    }
 }
 
 /* Contrast */

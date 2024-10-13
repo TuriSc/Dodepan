@@ -302,6 +302,9 @@ static inline void draw_main_screen(ssd1306_t *p) {
             ssd1306_draw_square(p, 120, y, 7, bar_height);
         } 
     }
+    if(get_volume() == 0) {
+        ssd1306_draw_string(p, 122, 13, 1, "X");
+    }
     
     // Draw selection mark and underline
     switch(get_context()) {
