@@ -1,15 +1,21 @@
-[submodule "lib/RP2040-Button"]
-	path = lib/RP2040-Button
-	url = https://github.com/TuriSc/RP2040-Button
-[submodule "lib/RP2040-PWM-DMA-Audio"]
-	path = lib/RP2040-PWM-DMA-Audio
-	url = https://github.com/TuriSc/RP2040-PWM-DMA-Audio
-[submodule "lib/rpi-pico-mpu6050"]
-	path = lib/rpi-pico-mpu6050
-	url = https://github.com/HumansAreWeak/rpi-pico-mpu6050
 [submodule "lib/pico-mpr121"]
 	path = lib/pico-mpr121
 	url = https://github.com/antgon/pico-mpr121
-[submodule "lib/RP2040-Moving-Average"]
-	path = lib/RP2040-Moving-Average
-	url = https://github.com/TuriSc/RP2040-Moving-Average
+[submodule "lib/RP2040-Button"]
+	path = lib/RP2040-Button
+	url = https://github.com/TuriSc/RP2040-Button
+[submodule "lib/rpi-pico-mpu6050"]
+	path = lib/rpi-pico-mpu6050
+	url = https://github.com/HumansAreWeak/rpi-pico-mpu6050
+[submodule "lib/RP2040-Battery-Check"]
+	path = lib/RP2040-Battery-Check
+	url = https://github.com/TuriSc/RP2040-Battery-Check
+[submodule "lib/RP2040-Rotary-Encoder"]
+	path = lib/RP2040-Rotary-Encoder
+	url = https://github.com/TuriSc/RP2040-Rotary-Encoder
+[submodule "lib/digital-synth-pra32-u"]
+	path = lib/digital-synth-pra32-u
+	url = https://github.com/risgk/digital-synth-pra32-u
+[submodule "lib/pico-ssd1306"]
+	path = lib/pico-ssd1306
+	url = https://github.com/TuriSc/pico-ssd1306
