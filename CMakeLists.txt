@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.13)
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 if (${PICO_BOARD} STREQUAL "pico2")
-project(Dodepan_rp2350 C CXX ASM)
+project(Dodepan_RP2350 C CXX ASM)
 add_definitions(-DBOARD_IS_PICO2)
 else()
-project(Dodepan_rp2040 C CXX ASM)
+project(Dodepan_RP2040 C CXX ASM)
 add_definitions(-DBOARD_IS_PICO)
 endif ()
  
