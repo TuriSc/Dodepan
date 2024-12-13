@@ -1,7 +1,6 @@
 /* Dodepan
  * An expressive electronic instrument and Midi controller built on Raspberry Pi Pico".
  * By Turi Scandurra – https://turiscandurra.com/circuits
- * v2.4.0 - 2024.08.16
  */
 
 #include "config.h"         // Most configurable options are here
@@ -26,6 +25,8 @@ typedef uint8_t byte;
 #include "scales.h"
 #include "battery-check.h"
 #include "imu.h"
+#include "VL53L0X.h"
+#include "tof.h"
 #include "touch.h"
 #include "looper.h"
 #include "display/display.h"
@@ -697,12 +698,18 @@ void bi_decl_all() {
 #if defined USE_DISPLAY && defined USE_IMU
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_MPU6050_SCL_DESCRIPTION));
+#elif defined USE_DISPLAY && defined USE_TOF
+    bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_TOF_SDA_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_TOF_SCL_DESCRIPTION));
 #elif defined USE_DISPLAY
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, SSD1306_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, SSD1306_SCL_DESCRIPTION));
 #elif defined USE_IMU
     bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, MPU6050_SDA_DESCRIPTION));
     bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, MPU6050_SCL_DESCRIPTION));
+#elif defined USE_TOF
+    bi_decl(bi_1pin_with_name(SSD1306_SDA_PIN, TOF_SDA_DESCRIPTION));
+    bi_decl(bi_1pin_with_name(SSD1306_SCL_PIN, TOF_SCL_DESCRIPTION));
 #endif
     bi_decl(bi_3pins_with_names(I2S_DATA_PIN, I2S_DATA_DESCRIPTION,
     I2S_CLOCK_PIN_BASE, I2S_BCK_DESCRIPTION,
@@ -740,7 +747,7 @@ int main() {
 #endif
 
     // Initialize display and IMU (sharing an I²C bus)
-#if defined (USE_DISPLAY) || defined (USE_IMU)
+#if defined (USE_DISPLAY) || defined (USE_IMU) || defined (USE_TOF)
     gpio_init(SSD1306_SDA_PIN);
     gpio_init(SSD1306_SCL_PIN);
     gpio_set_function(SSD1306_SDA_PIN, GPIO_FUNC_I2C);
@@ -758,6 +765,11 @@ int main() {
 
 #if defined (USE_IMU)
     imu_init(); // MPU6050
+#endif
+
+#if defined (USE_TOF)
+    VL53L0X sensor(TOF_I2C_PORT);
+    tof_init(&sensor);
 #endif
 
     // Start the audio engine.
@@ -795,7 +807,7 @@ int main() {
         set_scale_unsaved(false);
         set_instrument(0); // Dodepan custom preset
         update_instrument();
-        set_imu_axes(0x02); // Filter cutoff modulation enabled, pitch bending disabled
+        set_imu_axes(0x01); // Filter cutoff modulation disabled, pitch bending enabled
         set_volume(8); // Max value
         set_contrast(CONTRAST_MED); // Medium display brightness
 #if defined (USE_DISPLAY)
@@ -867,6 +879,19 @@ int main() {
         if(get_imu_axes() > 0) {
             imu_task(&imu_data);
             tilt_process();
+        }
+#endif
+#if defined (USE_TOF)
+        static uint8_t throttle;
+        if(get_imu_axes() > 0) {
+            if(throttle++ > TOF_THROTTLE) { // Limit the message rate
+                uint16_t distance_mm = sensor.readRangeContinuousMillimeters();
+                if (!sensor.timeoutOccurred()) {
+                    tof_task(&imu_data, &sensor, distance_mm);
+                    tilt_process();
+                }
+            throttle = 0;
+        }
         }
 #endif
         looper_task();

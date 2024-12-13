@@ -19,3 +19,6 @@
 [submodule "lib/pico-ssd1306"]
 	path = lib/pico-ssd1306
 	url = https://github.com/TuriSc/pico-ssd1306
+[submodule "lib/VL53L0X-pico"]
+	path = lib/VL53L0X-pico
+	url = https://github.com/Imel23/VL53L0X-pico/

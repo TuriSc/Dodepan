@@ -3,10 +3,10 @@ cmake_minimum_required(VERSION 3.13)
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 if (${PICO_BOARD} STREQUAL "pico2")
-project(Dodepan_RP2350 C CXX ASM)
+project(Dodepan_RP2350_ToF C CXX ASM)
 add_definitions(-DBOARD_IS_PICO2)
 else()
-project(Dodepan_RP2040 C CXX ASM)
+project(Dodepan_RP2040_ToF C CXX ASM)
 add_definitions(-DBOARD_IS_PICO)
 endif ()
  
@@ -21,27 +21,30 @@ add_executable(${PROJECT_NAME}
 
 add_subdirectory(lib/pico-mpr121/lib mpr121)
 add_subdirectory(lib/RP2040-Button button)
-add_subdirectory(lib/rpi-pico-mpu6050 haw_mpu6050)
+# add_subdirectory(lib/rpi-pico-mpu6050 haw_mpu6050)
 add_subdirectory(lib/RP2040-Battery-Check battery_check)
 add_subdirectory(lib/RP2040-Rotary-Encoder)
 add_subdirectory(lib/sound_i2s)
 
 target_sources(${PROJECT_NAME} PRIVATE
-        ${CMAKE_CURRENT_LIST_DIR}/imu.c
+        # ${CMAKE_CURRENT_LIST_DIR}/imu.c
+        ${CMAKE_CURRENT_LIST_DIR}/tof.cpp #imu.c and tof.cpp are mutually exclusive
         ${CMAKE_CURRENT_LIST_DIR}/state.c
         ${CMAKE_CURRENT_LIST_DIR}/touch.c
         ${CMAKE_CURRENT_LIST_DIR}/looper.c
         ${CMAKE_CURRENT_LIST_DIR}/display/display.c
         ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306/ssd1306.c
         ${CMAKE_CURRENT_LIST_DIR}/inc/tinyusb-midi/usb_descriptors.c
+        ${CMAKE_CURRENT_LIST_DIR}/lib/VL53L0X-pico/lib/src/VL53L0X.cpp
         )
 
 target_include_directories(${PROJECT_NAME} PUBLIC
         ${CMAKE_CURRENT_LIST_DIR}
-        ${CMAKE_CURRENT_LIST_DIR}/lib/rpi-pico-mpu6050/include/haw
+        # ${CMAKE_CURRENT_LIST_DIR}/lib/rpi-pico-mpu6050/include/haw
         ${CMAKE_CURRENT_LIST_DIR}/lib/pico-ssd1306
         ${CMAKE_CURRENT_LIST_DIR}/lib/digital-synth-pra32-u/Digital-Synth-PRA32-U
         ${CMAKE_CURRENT_LIST_DIR}/inc/tinyusb-midi
+        ${CMAKE_CURRENT_LIST_DIR}/lib/VL53L0X-pico/lib/inc
         )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
@@ -57,7 +60,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         tinyusb_board
         pico_unique_id
         button
-        haw_mpu6050
+        # haw_mpu6050
         battery_check
         pico_rotary_encoder
         )

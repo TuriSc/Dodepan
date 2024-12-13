@@ -1,13 +1,15 @@
 # Dodepan ­— Digital Synth and Midi controller
+## Time-of-flight sensor branch
 
 This repository contains the firmware and construction files for Dodepan, a portable electronic musical instrument and Midi controller that features a built-in synthesizer, looper, and expressive modulation.
+This branch focuses on replacing the IMU with a VL53L0X Time of Flight sensor for pitch bending.
 
 ## Overview
 
 [![YouTube Video](dodepan.jpg)](https://youtu.be/9P0qgh-Bno8 "Dodepan")
 [Video link](https://youtu.be/9P0qgh-Bno8)
 
-Dodepan is played by tapping on its twelve (_dodeka_ in Greek) capacitive metal pads. The instrument features I²S audio output, a rotary encoder for parameter selection, an SSD1306 OLED display, and an MPU-6050 IMU for velocity and pitch bending data.
+Dodepan is played by tapping on its twelve (_dodeka_ in Greek) capacitive metal pads. The instrument features I²S audio output, a rotary encoder for parameter selection, an SSD1306 OLED display, and a Time of Flight sensor for pitch bending data.
 
 ## What's New
 
@@ -36,12 +38,6 @@ The instrument parameters section allows you to change the 46 parameters of the 
 ## Looper
 
 The looper section records note on/off events. To enable it, select the looper screen and press the encoder button. An empty square icon indicates no recording. Start playing a melody to automatically start recording. Press the encoder button to stop the recording and start playback. You can play on top of the looper. Press the button again to pause or restart playback. Rotate the encoder knob to perform diatonic transport of the recording.
-
-## IMU Configuration
-
-To make the instrument more expressive, an MPU-6050 IMU (Inertial Measurement Unit) is used to convert the intensity of a tap into velocity data, so that hard taps play louder and soft taps play quieter. The IMU also provides gyroscope data, which Dodepan uses to perform pitch bending, like in a previous toy synth I made, [TS-DET1](https://github.com/TuriSc/TS-DET1).
-
-From the IMU config screen, you can enable or disable pitch bending and filter cutoff modulation when the Dodepan is tilted on the X and Y axes.
 
 ## Automatic Save
 
@@ -103,7 +99,7 @@ A Raspberry Pi Pico (RP2040) will work but with some limitations. Polyphonic ins
 
 * Raspberry Pi Pico 2 (RP2350)
 * MPR121 (touch sensor)
-* GY-521 IMU (MPU-6050 breakout board)
+* VL53L0X Time of Flight sensor (breakout board)
 * MAX98357 I²S DAC
 * 100KΩ resistor
 * 2x 2.2KΩ resistors (external I²C pullup resistors)

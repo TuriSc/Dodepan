@@ -3,7 +3,7 @@
 
 /* Device identifiers */
 #define PROGRAM_NAME                "Dodepan"
-#define PROGRAM_VERSION             "2.5.0"
+#define PROGRAM_VERSION             "2.5.0 ToF"
 #define PROGRAM_DESCRIPTION         "Portable musical instrument and MIDI controller"
 #define PROGRAM_URL                 "https://turiscandurra.com/circuits"
 #define USB_STR_MANUFACTURER        "TuriScandurra"
@@ -40,7 +40,7 @@
 
 /* GY-521 - MPU6050 accelerometer and gyroscope */
 // Note: the display and the MPU share the same I²C bus and pins
-#define USE_IMU                     // The IMU is optional, but gives you velocity and bending
+// #define USE_IMU                     // The IMU is optional, but gives you velocity and bending
 #define MPU6050_I2C_PORT            i2c1
 #define MPU6050_SDA_PIN             SSD1306_SDA_PIN
 #define MPU6050_SDA_DESCRIPTION     "MPU6050 SDA"
@@ -55,6 +55,24 @@
 #define PLUS " + "
 #define SSD1306_MPU6050_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS MPU6050_SDA_DESCRIPTION
 #define SSD1306_MPU6050_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION PLUS MPU6050_SCL_DESCRIPTION
+
+/* VL53L0X Time of Flight sensor */
+// This sensor and the MPU are mutually exclusive
+#define USE_TOF
+#define TOF_I2C_PORT            i2c1
+#define TOF_SDA_PIN             SSD1306_SDA_PIN
+#define TOF_SDA_DESCRIPTION     "TOF SDA"
+#define TOF_SCL_PIN             SSD1306_SCL_PIN
+#define TOF_SCL_DESCRIPTION     "TOF SCL"
+#define TOF_ADDRESS             0x29 // Can be changed to 0x52 by tying the XSHUT pin to VCC
+#define TOF_DIRECTION           1 // 0 = far to near bends down, 1 = far to near bends up
+#define TOF_DISTANCE_MIN        40 // In mm
+#define TOF_DISTANCE_MAX        400 // In mm
+#define TOF_THROTTLE            10  // Number of cycles to wait before taking a new measurement
+#define TOF_INPUT_RANGE         TOF_DISTANCE_MAX - TOF_DISTANCE_MIN
+#define SSD1306_TOF_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS TOF_SDA_DESCRIPTION
+#define SSD1306_TOF_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION PLUS TOF_SCL_DESCRIPTION
+
 
 /* MPR121 */
 #define MPR121_I2C_PORT             i2c0
