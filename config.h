@@ -3,7 +3,7 @@
 
 /* Device identifiers */
 #define PROGRAM_NAME                "Dodepan"
-#define PROGRAM_VERSION             "2.5.0 ToF"
+#define PROGRAM_VERSION             "2.5.1 ToF"
 #define PROGRAM_DESCRIPTION         "Portable musical instrument and MIDI controller"
 #define PROGRAM_URL                 "https://turiscandurra.com/circuits"
 #define USB_STR_MANUFACTURER        "TuriScandurra"

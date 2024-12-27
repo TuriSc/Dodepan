@@ -18,6 +18,7 @@ void display_draw(ssd1306_t *p);
 void display_update_contrast(ssd1306_t *p);
 void display_dim(ssd1306_t *p);
 void display_wake(ssd1306_t *p);
+void display_refresh(ssd1306_t *p);
 void intro_animation(ssd1306_t *p, void (*callback)(void));
 
 #ifdef __cplusplus
