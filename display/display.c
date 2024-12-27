@@ -362,6 +362,11 @@ void display_wake(ssd1306_t *p) {
     display_dim_alarm_id = add_alarm_in_ms(DISPLAY_DIM_DELAY * 1000, display_dim_callback, p, true);
 }
 
+void display_refresh(ssd1306_t *p) {
+    ssd1306_reset(p);
+    ssd1306_show(p);
+}
+
 void display_update_contrast(ssd1306_t *p) {
     if (display_dim_alarm_id) cancel_alarm(display_dim_alarm_id);
     uint8_t contrast = get_contrast();

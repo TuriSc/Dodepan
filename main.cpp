@@ -379,6 +379,17 @@ void encoder_up() {
     switch (context) {
         case CTX_SELECTION:
             set_selection_up();
+            // Force a display refresh, to clear out any glitches that might
+            // have occurred earlier due to I²C timeouts
+#if defined (USE_DISPLAY)
+            switch(get_selection()) {
+                case SELECTION_KEY:
+                case SELECTION_LOOPER:
+                case SELECTION_IMU_CONFIG:
+                    display_refresh(&display);
+                break;
+            }
+#endif
         break;
         case CTX_KEY:
             // D#7 is the highest note that can be set as root note
@@ -448,6 +459,17 @@ void encoder_down() {
     switch (get_context()) {
         case CTX_SELECTION:
             set_selection_down();
+            // Force a display refresh, to clear out any glitches that might
+            // have occurred earlier due to I²C timeouts
+#if defined (USE_DISPLAY)
+            switch(get_selection()) {
+                case SELECTION_VOLUME:
+                case SELECTION_LOOPER:
+                case SELECTION_IMU_CONFIG:
+                    display_refresh(&display);
+                break;
+            }
+#endif
         break;
         case CTX_KEY:
             set_key_down();
