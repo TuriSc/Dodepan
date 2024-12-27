@@ -71,6 +71,18 @@ Sixteen built-in scales or modes are available:
 
 You can add up to four custom scales from the scale editing screen, which is accessed by long-pressing the rotary encoder switch while the current scale is selected.
 
+## Secondary menu screens
+A number of settings and features are accessible from secondary onboard menu screens.
+
+| Selection  | On press                          | On long press                                      |
+|------------|-----------------------------------|----------------------------------------------------|
+| Key        | Enter key selection mode          | Display about screen                               |
+| Scale      | Enter scale selection mode        | Enter scale edit screen (long press to exit)       |
+| Instrument | Enter instrument selection mode   | Enter instrument edit screen (long press to exit)  |
+| Volume     | Enter volume level selection mode | Enter display contrast selection screen            |
+| Looper     | Activate, play/pause              | Exit looper screen                                 |
+| IMU config | Enter IMU config mode             | Exit IMU config screen                             |
+
 ## Installation
 
 To install the firmware, simply flash the provided uf2 file that matches your microcontroller (RP2040 for Raspberry Pi Pico and RP2350 for Raspberry Pi Pico 2). If you want to change any configuration options, you'll need to build the sources and generate your own uf2 file.

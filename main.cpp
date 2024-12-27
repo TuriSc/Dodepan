@@ -819,7 +819,7 @@ int main() {
         update_instrument();
         set_imu_axes(0x02); // Filter cutoff modulation enabled, pitch bending disabled
         set_volume(8); // Max value
-        set_contrast(CONTRAST_MED); // Medium display brightness
+        set_contrast(CONTRAST_AUTO); // Medium display brightness
 #if defined (USE_DISPLAY)
         display_update_contrast(&display);
 #endif
