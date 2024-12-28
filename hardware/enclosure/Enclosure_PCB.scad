@@ -5,7 +5,7 @@
 // Date: 2024-09-20
 // License: MIT License
 
-version_label = "v2.5";
+version_label = "v2.6";
 
 enclosure_r = 75;
 inner_h = 20.5;
@@ -208,7 +208,7 @@ module enclosure() {
         // TP4056 socket and LED opening
         rotate([0,0,120]) translate([-20.25,enclosure_side_r+2.4,pcb_plane + 3.0]) TP4056_holes();
         // Jack socket opening
-        translate([-8.65,enclosure_side_r+14, pcb_plane]) audio_socket_hole();
+        translate([-5.85,enclosure_side_r+14, pcb_plane]) audio_socket_hole();
         // Electrode, speaker holes and decorative circles
         face_circles();
         rotate([0,0,-60]) electrode_holes();
