@@ -887,7 +887,7 @@ int main() {
             if(throttle++ > TOF_THROTTLE) { // Limit the message rate
                 uint16_t distance_mm = sensor.readRangeContinuousMillimeters();
                 if (!sensor.timeoutOccurred()) {
-                    tof_task(&imu_data, &sensor, distance_mm);
+                    tof_scale(&imu_data, distance_mm);
                     tilt_process();
                 }
             throttle = 0;

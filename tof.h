@@ -5,6 +5,6 @@
 #include "imu.h"
 
 void tof_init(VL53L0X* sensor);
-void tof_task(Imu_data * data, VL53L0X* sensor, uint16_t distance_mm);
+void tof_scale(Imu_data * data, uint16_t distance_mm);
 
 #endif
