@@ -1,7 +1,6 @@
 /* Dodepan
  * An expressive electronic instrument and Midi controller built on Raspberry Pi Pico".
  * By Turi Scandurra – https://turiscandurra.com/circuits
- * v2.4.0 - 2024.08.16
  */
 
 #include "config.h"         // Most configurable options are here
@@ -819,7 +818,7 @@ int main() {
         update_instrument();
         set_imu_axes(0x02); // Filter cutoff modulation enabled, pitch bending disabled
         set_volume(8); // Max value
-        set_contrast(CONTRAST_AUTO); // Medium display brightness
+        set_contrast(CONTRAST_AUTO); // Automatic dimming of display brightness
 #if defined (USE_DISPLAY)
         display_update_contrast(&display);
 #endif
