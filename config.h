@@ -68,8 +68,8 @@
 #define TOF_DIRECTION           1 // 0 = far to near bends down, 1 = far to near bends up
 #define TOF_DISTANCE_MIN        40 // In mm
 #define TOF_DISTANCE_MAX        400 // In mm
+#define TOF_INPUT_RANGE         (TOF_DISTANCE_MAX - TOF_DISTANCE_MIN)
 #define TOF_THROTTLE            10  // Number of cycles to wait before taking a new measurement
-#define TOF_INPUT_RANGE         TOF_DISTANCE_MAX - TOF_DISTANCE_MIN
 #define SSD1306_TOF_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS TOF_SDA_DESCRIPTION
 #define SSD1306_TOF_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION PLUS TOF_SCL_DESCRIPTION
 
