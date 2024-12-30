@@ -69,7 +69,10 @@
 #define TOF_DISTANCE_MIN        40 // In mm
 #define TOF_DISTANCE_MAX        400 // In mm
 #define TOF_INPUT_RANGE         (TOF_DISTANCE_MAX - TOF_DISTANCE_MIN)
-#define TOF_THROTTLE            10  // Number of cycles to wait before taking a new measurement
+#define TOF_THROTTLE            32   // Number of cycles to wait before taking a new measurement.
+                                     // Values too low will cause the I2C bus to byte off more than
+                                     // it can chew, feel a little locked up, and needing to work
+                                     // through some communication issues.
 #define SSD1306_TOF_SDA_DESCRIPTION SSD1306_SDA_DESCRIPTION PLUS TOF_SDA_DESCRIPTION
 #define SSD1306_TOF_SCL_DESCRIPTION SSD1306_SCL_DESCRIPTION PLUS TOF_SCL_DESCRIPTION
 
