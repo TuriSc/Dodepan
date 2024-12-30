@@ -114,7 +114,6 @@ A Raspberry Pi Pico (RP2040) will work but with some limitations. Polyphonic ins
 * VL53L0X Time of Flight sensor (breakout board)
 * MAX98357 I²S DAC
 * 100KΩ resistor
-* 2x 2.2KΩ resistors (external I²C pullup resistors)
 * 1000uF electrolytic capacitor (for decoupling, optional. A smaller value is fine)
 * Rocker switch (12mm x 8mm hole size)
 * 18650 Lithium battery
@@ -135,6 +134,8 @@ A Raspberry Pi Pico (RP2040) will work but with some limitations. Polyphonic ins
 
 [PDF version](hardware/Dodepan-schematic.pdf)
 
+Please note that for the ToF version of Dodepan the two 2.2KΩ external I²C pullup resistors must be omitted.
+
 ## Step-by-step assembly guide (PCB version)
 
 See [hardware/assembly guide/README.md](hardware/assembly guide/README.md)
@@ -148,5 +149,5 @@ See [hardware/assembly guide/README.md](hardware/assembly guide/README.md)
 
 Dodepan is an original project.
 Δώδεκα (dodeka) means twelve in Greek. Pan is a reference to the handpan, the instrument that inspired the first version of Dodepan.
-The source code for the first version can be found on the version_1 branch at [TuriSc/Dodepan](https://github.com/TuriSc/Dodepan/tree/version_1).  
+The source code for the first version can be found on the version_1 branch at [TuriSc/Dodepan](https://github.com/TuriSc/Dodepan/tree/version_1).
 Similar projects can be found on my blog: [turiscandurra.com/circuits](https://turiscandurra.com/circuits/)
