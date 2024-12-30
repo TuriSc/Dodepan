@@ -5,6 +5,7 @@
 
 #include "config.h"         // Most configurable options are here
 #include "pico/stdlib.h"
+#include <stdlib.h>
 // Arduino types added for compatibility
 typedef bool boolean;
 typedef uint8_t byte;
@@ -905,15 +906,25 @@ int main() {
 #endif
 #if defined (USE_TOF)
         static uint8_t throttle;
+        static uint16_t prev_val;
+        static uint16_t target_val;
+        static uint16_t delta_scaled;
+        static int8_t sign;
         if(get_imu_axes() > 0) {
             if(throttle++ > TOF_THROTTLE) { // Limit the message rate
-                uint16_t distance_mm = sensor.readRangeContinuousMillimeters();
-                if (!sensor.timeoutOccurred()) {
-                    tof_scale(&imu_data, distance_mm);
-                    tilt_process();
-                }
-            throttle = 0;
-        }
+                prev_val = target_val;
+                target_val = sensor.readRangeContinuousMillimeters();
+                delta_scaled = abs(target_val - prev_val) / TOF_THROTTLE;
+                sign = (target_val > prev_val) ? 1 : -1;
+                throttle = 0;
+            }
+            // Lerp the value on every cycle
+            uint16_t delta = target_val - prev_val;
+            uint16_t distance_mm = prev_val + delta_scaled * throttle * sign;
+            if (!sensor.timeoutOccurred()) {
+                tof_scale(&imu_data, distance_mm);
+                tilt_process();
+            }
         }
 #endif
         looper_task();
