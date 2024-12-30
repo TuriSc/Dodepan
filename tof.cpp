@@ -5,7 +5,7 @@
 
 void tof_init(VL53L0X* sensor) {
     sensor->init();
-    sensor->setTimeout(500);
+    sensor->setTimeout(2);
     sensor->startContinuous();
 }
 
