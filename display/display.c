@@ -71,7 +71,9 @@ static inline void draw_info_screen(ssd1306_t *p) {
     for (uint8_t i = 0; i < num_substr; i++) {
         ssd1306_draw_string_with_font(p, 8, baseline, 1, spaced_font, substrings[i]);
         baseline += 10;
+        free(substrings[i]);
     }
+    free(substrings);
 }
 
 const uint8_t transpose_coords[12][2] = {
