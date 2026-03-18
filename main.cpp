@@ -353,7 +353,7 @@ static void __not_in_flash_func(i2s_audio_task)(void) {
     if (buffer != last_buffer) { 
         last_buffer = buffer;
         for (int i = 0; i < AUDIO_BUFFER_LENGTH; i++) {
-        short sample = g_synth.process(right_buffer);
+        short sample = g_synth.process(0, right_buffer);
         int temp = (int)sample * get_volume();
         short output = (short)(temp >> 3);
         *buffer++ = output;
@@ -846,6 +846,8 @@ int main() {
     looper_init(512);
 
     // Initialize the rotary encoder and switch
+    button_system_init();
+    encoder_system_init();
 #if defined (ENCODER_USE_PULLUPS)
     gpio_pull_up(ENCODER_DT_PIN);
     gpio_pull_up(ENCODER_CLK_PIN);
@@ -882,6 +884,7 @@ int main() {
 #endif
 
     while (true) { // Main loop
+        encoder_poll_all_events();
         mpr121_task();
 
 #if defined (USE_IMU)
