@@ -47,6 +47,7 @@ ssd1306_t display;
 
 static alarm_id_t power_on_alarm_id;
 static alarm_id_t long_press_alarm_id;
+static bool looper_button_pending;
 static alarm_id_t flash_write_alarm_id;
 
 void core1_main();
@@ -300,8 +301,21 @@ void touch_on(uint8_t id) {
     // The range of velocity is 0-127, but here it's clamped to 64-127
     uint8_t velocity = imu_data.acceleration;
 
+    if (looper_is_playing()) {
+        if (get_context() != CTX_LOOPER) {
+            looper_stop(); // Stop playback, preserve recording, don't start a new one
+            note_on(id, velocity);
+#if defined (USE_DISPLAY)
+            display_draw(&display);
+#endif
+            return;
+        }
+        all_notes_off(); // Stop loop notes before playing the new note
+    }
     note_on(id, velocity);
-    looper_record(id, velocity, true);
+    if (get_context() == CTX_LOOPER) {
+        looper_record(id, velocity, true);
+    }
 
     // Since a note_on event can start the looper recording,
     // a display draw needs to be called here.
@@ -312,7 +326,9 @@ void touch_on(uint8_t id) {
 
 void touch_off(uint8_t id) {
     note_off(id);
-    looper_record(id, 0, false);
+    if (get_context() == CTX_LOOPER) {
+        looper_record(id, 0, false);
+    }
 }
 
 void all_notes_off() {
@@ -598,6 +614,7 @@ int64_t on_long_press(alarm_id_t id, void *) {
             set_context(CTX_SELECTION);
         break;
         case CTX_LOOPER:
+            looper_button_pending = false;
             looper_disable();
             set_context(CTX_SELECTION);
         break;
@@ -618,7 +635,16 @@ int64_t on_long_press(alarm_id_t id, void *) {
 void button_onchange(button_t *button_p) {
     button_t *button = (button_t*)button_p;
     if (long_press_alarm_id) cancel_alarm(long_press_alarm_id);
-    if (button->state) return; // Ignore button release
+    if (button->state) { // Button released
+        if (looper_button_pending) {
+            looper_button_pending = false;
+            set_context(CTX_SELECTION);
+#if defined(USE_DISPLAY)
+            display_draw(&display);
+#endif
+        }
+        return;
+    }
     long_press_alarm_id = add_alarm_in_ms(LONG_PRESS_THRESHOLD, on_long_press, NULL, true);
 
     context_t context = get_context();
@@ -671,7 +697,11 @@ void button_onchange(button_t *button_p) {
             set_selection(SELECTION_INSTRUMENT);
         break;
         case CTX_LOOPER:
-            looper_onpress();
+            if (looper_is_playing()) {
+                looper_button_pending = true;
+            } else {
+                looper_onpress();
+            }
         break;
         case CTX_SCALE_EDIT_STEP:
             set_context(CTX_SCALE_EDIT_DEG);

@@ -36,6 +36,7 @@ typedef struct looper {
 
 void looper_onpress();
 void looper_enable();
+void looper_stop();
 void looper_disable();
 bool looper_is_disabled();
 bool looper_is_ready();

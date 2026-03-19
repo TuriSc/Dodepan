@@ -19,9 +19,6 @@ void looper_onpress() {
             looper_start_playback();
         break;
         case LOOP_PLAY:
-            // Stop playing
-            all_notes_off();
-            looper_set_state(LOOP_READY);
         break;
         case LOOP_OFF:
             // Do nothing
@@ -52,8 +49,14 @@ void looper_start_playback() {
 
 // Record a note event
 void looper_record(uint8_t id, uint8_t velocity, bool is_on) {
-    if (looper_is_disabled() || looper_is_playing()) { return; }
-    else if (looper_is_ready()) {
+    if (looper_is_disabled()) { return; }
+    if (looper_is_playing()) {
+        if (!is_on) { return; } // Ignore note-off events while playing
+        // Prepare for a new recording
+        looper.has_recording = false;
+        looper_set_state(LOOP_READY);
+    }
+    if (looper_is_ready()) {
         looper.rec_index = 0;
         looper.rec_start_timestamp = 0;
         looper.loop_duration = 0;
@@ -122,11 +125,21 @@ void looper_task() {
 }
 
 void looper_enable() {
+    if (looper_is_disabled()) {
+        looper_set_state(LOOP_READY);
+    }
+}
+
+void looper_stop() {
+    all_notes_off();
     looper_set_state(LOOP_READY);
 }
 
 void looper_disable() {
     all_notes_off();
+    looper.has_recording = false;
+    looper.rec_index = 0;
+    looper.loop_duration = 0;
     looper_set_state(LOOP_OFF);
 }
 
