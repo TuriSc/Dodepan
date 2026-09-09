@@ -16,6 +16,8 @@ typedef enum context {
     CTX_CONTRAST,
     CTX_LOOPER,
     CTX_IMU_CONFIG,
+    CTX_MIDI_CC,
+    CTX_PROGRAM_CHANGE,
     CTX_SYNTH_EDIT_PARAM,
     CTX_SYNTH_EDIT_ARG,
     CTX_SYNTH_EDIT_STORE,
@@ -31,8 +33,13 @@ typedef enum selection {
     SELECTION_VOLUME,
     SELECTION_LOOPER,
     SELECTION_IMU_CONFIG,
+    SELECTION_MIDI_CC,
+    SELECTION_PROGRAM_CHANGE,
     SELECTION_LAST,
 } selection_t;
+
+#define MIDI_CC_NONE 0xFF
+#define MIDI_PC_NONE 0xFF
 
 typedef struct state {
     uint8_t key;
@@ -69,6 +76,15 @@ typedef struct state {
                                     // 0x3 - (default) both effects are active
 
     bool low_batt;                  // Low battery detected
+
+    uint8_t midi_cc_last;           // Id (0-11) of the last Midi CC message sent
+                                    // while the Midi CC screen was visible;
+                                    // MIDI_CC_NONE if none sent yet
+    uint8_t midi_cc_last_value;     // Value (0 or 127) of the last Midi CC message sent
+
+    uint8_t midi_pc_last;           // Id (0-11) of the last Midi Program Change message sent
+                                    // while the Program Change screen was visible;
+                                    // MIDI_CC_NONE if none sent yet
 } state_t;
 
 extern uint8_t get_note_by_id(uint8_t id);
@@ -128,6 +144,14 @@ void set_contrast_down();
 
 bool get_low_batt();
 void set_low_batt(bool low_batt);
+
+uint8_t get_midi_cc_last();
+void set_midi_cc_last(uint8_t cc);
+uint8_t get_midi_cc_last_value();
+void set_midi_cc_last_value(uint8_t value);
+
+uint8_t get_midi_pc_last();
+void set_midi_pc_last(uint8_t pc);
 
 uint8_t get_parameter();
 void set_parameter(uint8_t param);

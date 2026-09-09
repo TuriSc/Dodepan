@@ -21,6 +21,8 @@
 #include "icon_imu_on_x.h"
 #include "icon_imu_on_y.h"
 #include "icon_imu_on_x_y.h"
+#include "icon_midi_cc.h"
+#include "icon_program_change.h"
 #include "icon_close.h"
 #include "icon_looper.h"
 #include "icon_rec.h"
@@ -147,6 +149,43 @@ static inline void draw_imu_axes_screen(ssd1306_t *p) {
     if(get_context() == CTX_IMU_CONFIG) {
         ssd1306_draw_square(p, 0, 0, 2, 32);
     }
+}
+
+#define MIDI_CC_ICON_MARGIN_X ((SSD1306_WIDTH / 2) - (62 / 2)) // Screen title is 62px wide
+#define MIDI_CC_CHAR_W 6 // font_8x5 advance per char at scale 1 (5px width + 1px spacing)
+static inline void draw_midi_cc_screen(ssd1306_t *p) {
+    ssd1306_bmp_show_image_with_offset(p, icon_midi_cc_data, icon_midi_cc_size, MIDI_CC_ICON_MARGIN_X, 0);
+
+    uint8_t cc = get_midi_cc_last();
+    char str[10];
+    if (cc == MIDI_CC_NONE) {
+        snprintf(str, sizeof(str), "OFF");
+    } else {
+        snprintf(str, sizeof(str), "CC %d %d", cc, get_midi_cc_last_value());
+    }
+    uint8_t width = strlen(str) * MIDI_CC_CHAR_W;
+    ssd1306_draw_string(p, (SSD1306_WIDTH - width) / 2, 16, 1, str);
+
+    // Draw selection mark
+    ssd1306_draw_square(p, 0, 0, 2, 32);
+}
+
+#define PROGRAM_CHANGE_ICON_MARGIN_X ((SSD1306_WIDTH / 2) - (121 / 2)) // Screen title is 121px wide
+static inline void draw_program_change_screen(ssd1306_t *p) {
+    ssd1306_bmp_show_image_with_offset(p, icon_program_change_data, icon_program_change_size, PROGRAM_CHANGE_ICON_MARGIN_X, 0);
+
+    uint8_t pc = get_midi_pc_last();
+    char str[6];
+    if (pc == MIDI_PC_NONE) {
+        snprintf(str, sizeof(str), "OFF");
+    } else {
+        snprintf(str, sizeof(str), "PC %d", pc);
+    }
+    uint8_t width = strlen(str) * MIDI_CC_CHAR_W;
+    ssd1306_draw_string(p, (SSD1306_WIDTH - width) / 2, 16, 1, str);
+
+    // Draw selection mark
+    ssd1306_draw_square(p, 0, 0, 2, 32);
 }
 
 static inline void draw_contrast_screen(ssd1306_t *p) {
@@ -419,6 +458,12 @@ void display_draw(ssd1306_t *p) {
                 case SELECTION_IMU_CONFIG:
                     draw_imu_axes_screen(p);
                 break;
+                case SELECTION_MIDI_CC:
+                    draw_midi_cc_screen(p);
+                break;
+                case SELECTION_PROGRAM_CHANGE:
+                    draw_program_change_screen(p);
+                break;
             }
             break;
         }
@@ -436,6 +481,12 @@ void display_draw(ssd1306_t *p) {
         break;
         case CTX_IMU_CONFIG:
             draw_imu_axes_screen(p);
+        break;
+        case CTX_MIDI_CC:
+            draw_midi_cc_screen(p);
+        break;
+        case CTX_PROGRAM_CHANGE:
+            draw_program_change_screen(p);
         break;
         case CTX_SYNTH_EDIT_PARAM:
         case CTX_SYNTH_EDIT_ARG:

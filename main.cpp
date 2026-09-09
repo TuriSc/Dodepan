@@ -49,6 +49,11 @@ static alarm_id_t power_on_alarm_id;
 static alarm_id_t long_press_alarm_id;
 static bool looper_button_pending;
 static alarm_id_t flash_write_alarm_id;
+static bool note_active[12]; // Tracks which pads currently have a note playing, so
+                             // touch_off can tell whether it should send note_off
+static uint8_t midi_cc_toggle_value[12]; // Tracks the last value (0 or 127) sent for each
+                                         // pad while the Midi CC screen is visible,
+                                         // so repeated touches toggle the value
 
 void core1_main();
 
@@ -284,6 +289,11 @@ static inline uint32_t tud_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2
     return tud_midi_stream_write(jack_id, msg, 3);
 }
 
+static inline uint32_t tud_midi_write16 (uint8_t jack_id, uint8_t b1, uint8_t b2) {
+    uint8_t msg[2] = { b1, b2 };
+    return tud_midi_stream_write(jack_id, msg, 2);
+}
+
 void note_on(uint8_t id, uint8_t velocity) {
     uint8_t note = get_note_by_id(id);
     g_synth.note_on(note, velocity);
@@ -296,7 +306,39 @@ void note_off(uint8_t id) {
     tud_midi_write24(0, 0x80, note, 0);
 }
 
+void midi_cc(uint8_t cc_number, uint8_t value) {
+    tud_midi_write24(0, 0xB0, cc_number, value);
+}
+
+void midi_program_change(uint8_t program_number) {
+    tud_midi_write16(0, 0xC0, program_number);
+}
+
 void touch_on(uint8_t id) {
+    if (get_context() == CTX_MIDI_CC) {
+        // Send a Midi CC message instead of playing a note.
+        // Repeated touches of the same pad toggle between 127 and 0.
+        uint8_t value = midi_cc_toggle_value[id] ? 0 : 127;
+        midi_cc_toggle_value[id] = value;
+        midi_cc(id, value);
+        set_midi_cc_last(id);
+        set_midi_cc_last_value(value);
+#if defined (USE_DISPLAY)
+        display_draw(&display);
+#endif
+        return;
+    }
+
+    if (get_context() == CTX_PROGRAM_CHANGE) {
+        // Send a Midi Program Change message instead of playing a note
+        midi_program_change(id);
+        set_midi_pc_last(id);
+#if defined (USE_DISPLAY)
+        display_draw(&display);
+#endif
+        return;
+    }
+
     // Set the velocity according to accelerometer data.
     // The range of velocity is 0-127, but here it's clamped to 64-127
     uint8_t velocity = imu_data.acceleration;
@@ -305,6 +347,7 @@ void touch_on(uint8_t id) {
         if (get_context() != CTX_LOOPER) {
             looper_stop(); // Stop playback, preserve recording, don't start a new one
             note_on(id, velocity);
+            note_active[id] = true;
 #if defined (USE_DISPLAY)
             display_draw(&display);
 #endif
@@ -313,6 +356,7 @@ void touch_on(uint8_t id) {
         all_notes_off(); // Stop loop notes before playing the new note
     }
     note_on(id, velocity);
+    note_active[id] = true;
     if (get_context() == CTX_LOOPER) {
         looper_record(id, velocity, true);
     }
@@ -325,6 +369,9 @@ void touch_on(uint8_t id) {
 }
 
 void touch_off(uint8_t id) {
+    // Only send a note_off for touches that started a note
+    if (!note_active[id]) { return; }
+    note_active[id] = false;
     note_off(id);
     if (get_context() == CTX_LOOPER) {
         looper_record(id, 0, false);
@@ -394,6 +441,15 @@ void encoder_up() {
     switch (context) {
         case CTX_SELECTION:
             set_selection_up();
+            // These two screens activate their context automatically
+            switch(get_selection()) {
+                case SELECTION_MIDI_CC:
+                    set_context(CTX_MIDI_CC);
+                break;
+                case SELECTION_PROGRAM_CHANGE:
+                    set_context(CTX_PROGRAM_CHANGE);
+                break;
+            }
             // Force a display refresh, to clear out any glitches that might
             // have occurred earlier due to I²C timeouts
 #if defined (USE_DISPLAY)
@@ -401,6 +457,8 @@ void encoder_up() {
                 case SELECTION_KEY:
                 case SELECTION_LOOPER:
                 case SELECTION_IMU_CONFIG:
+                case SELECTION_MIDI_CC:
+                case SELECTION_PROGRAM_CHANGE:
                     display_refresh(&display);
                 break;
             }
@@ -455,6 +513,14 @@ void encoder_up() {
         case CTX_SCALE_EDIT_STORE:
             set_scale_slot_up();
         break;
+        case CTX_MIDI_CC:
+            set_selection(SELECTION_PROGRAM_CHANGE);
+            set_context(CTX_PROGRAM_CHANGE);
+        break;
+        case CTX_PROGRAM_CHANGE:
+            set_selection(SELECTION_KEY);
+            set_context(CTX_SELECTION);
+        break;
         case CTX_INIT:
         case CTX_INFO:
         default:
@@ -474,6 +540,15 @@ void encoder_down() {
     switch (get_context()) {
         case CTX_SELECTION:
             set_selection_down();
+            // These two screens activate their context automatically
+            switch(get_selection()) {
+                case SELECTION_MIDI_CC:
+                    set_context(CTX_MIDI_CC);
+                break;
+                case SELECTION_PROGRAM_CHANGE:
+                    set_context(CTX_PROGRAM_CHANGE);
+                break;
+            }
             // Force a display refresh, to clear out any glitches that might
             // have occurred earlier due to I²C timeouts
 #if defined (USE_DISPLAY)
@@ -481,6 +556,8 @@ void encoder_down() {
                 case SELECTION_VOLUME:
                 case SELECTION_LOOPER:
                 case SELECTION_IMU_CONFIG:
+                case SELECTION_MIDI_CC:
+                case SELECTION_PROGRAM_CHANGE:
                     display_refresh(&display);
                 break;
             }
@@ -533,6 +610,14 @@ void encoder_down() {
         break;
         case CTX_SCALE_EDIT_STORE:
             set_scale_slot_down();
+        break;
+        case CTX_MIDI_CC:
+            set_selection(SELECTION_IMU_CONFIG);
+            set_context(CTX_SELECTION);
+        break;
+        case CTX_PROGRAM_CHANGE:
+            set_selection(SELECTION_MIDI_CC);
+            set_context(CTX_MIDI_CC);
         break;
         case CTX_INIT:
         case CTX_INFO:
@@ -593,34 +678,36 @@ int64_t on_long_press(alarm_id_t id, void *) {
         break;
         case CTX_CONTRAST:
         case CTX_IMU_CONFIG:
-            set_context(CTX_SELECTION);
+        set_context(CTX_SELECTION);
         break;
         case CTX_INSTRUMENT:
-            set_context(CTX_SYNTH_EDIT_PARAM);
-            update_argument_from_parameter(get_parameter());
+        set_context(CTX_SYNTH_EDIT_PARAM);
+        update_argument_from_parameter(get_parameter());
         break;
         case CTX_SCALE:
-            set_context(CTX_SCALE_EDIT_STEP);
+        set_context(CTX_SCALE_EDIT_STEP);
         break;
         case CTX_SCALE_EDIT_STEP:
         case CTX_SCALE_EDIT_DEG:
-            set_context(CTX_SCALE_EDIT_STORE);
+        set_context(CTX_SCALE_EDIT_STORE);
         break;
         case CTX_SYNTH_EDIT_PARAM:
         case CTX_SYNTH_EDIT_ARG:
-            set_context(CTX_SYNTH_EDIT_STORE);
+        set_context(CTX_SYNTH_EDIT_STORE);
         break;
         case CTX_INFO:
-            set_context(CTX_SELECTION);
+        set_context(CTX_SELECTION);
         break;
         case CTX_LOOPER:
-            looper_button_pending = false;
-            looper_disable();
-            set_context(CTX_SELECTION);
+        looper_button_pending = false;
+        looper_disable();
+        set_context(CTX_SELECTION);
         break;
         case CTX_INIT:
         case CTX_SYNTH_EDIT_STORE:
         case CTX_SCALE_EDIT_STORE:
+        case CTX_MIDI_CC:
+        case CTX_PROGRAM_CHANGE:
         default:
             ; // Do nothing
         break;
@@ -672,6 +759,12 @@ void button_onchange(button_t *button_p) {
                 case SELECTION_IMU_CONFIG:
                     set_context(CTX_IMU_CONFIG);
                 break;
+                case SELECTION_MIDI_CC:
+                    set_context(CTX_MIDI_CC);
+                break;
+                case SELECTION_PROGRAM_CHANGE:
+                    set_context(CTX_PROGRAM_CHANGE);
+                break;
             }
         }
         break;
@@ -682,44 +775,46 @@ void button_onchange(button_t *button_p) {
         case CTX_VOLUME:
         case CTX_CONTRAST:
         case CTX_IMU_CONFIG:
-            set_context(CTX_SELECTION);
-            request_flash_write();
+        set_context(CTX_SELECTION);
+        request_flash_write();
         break;
         case CTX_SYNTH_EDIT_PARAM:
-            set_context(CTX_SYNTH_EDIT_ARG);
+        set_context(CTX_SYNTH_EDIT_ARG);
         break;
         case CTX_SYNTH_EDIT_ARG:
-            set_context(CTX_SYNTH_EDIT_PARAM);
+        set_context(CTX_SYNTH_EDIT_PARAM);
         break;
         case CTX_SYNTH_EDIT_STORE:
-            submit_preset_slot();
-            set_context(CTX_SELECTION);
-            set_selection(SELECTION_INSTRUMENT);
+        submit_preset_slot();
+        set_context(CTX_SELECTION);
+        set_selection(SELECTION_INSTRUMENT);
         break;
         case CTX_LOOPER:
-            if (looper_is_playing()) {
-                looper_button_pending = true;
-            } else {
-                looper_onpress();
-            }
+        if (looper_is_playing()) {
+            looper_button_pending = true;
+        } else {
+            looper_onpress();
+        }
         break;
         case CTX_SCALE_EDIT_STEP:
-            set_context(CTX_SCALE_EDIT_DEG);
+        set_context(CTX_SCALE_EDIT_DEG);
         break;
         case CTX_SCALE_EDIT_DEG:
-            set_context(CTX_SCALE_EDIT_STEP);
+        set_context(CTX_SCALE_EDIT_STEP);
         break;
         case CTX_SCALE_EDIT_STORE:
-            submit_scale_slot();
-            set_context(CTX_SELECTION);
-            set_selection(SELECTION_SCALE);
+        submit_scale_slot();
+        set_context(CTX_SELECTION);
+        set_selection(SELECTION_SCALE);
         break;
         case CTX_INIT:
+        case CTX_MIDI_CC:
+        case CTX_PROGRAM_CHANGE:
         default:
-            ; // Do nothing
+        ; // Do nothing
         break;
     }
-#if defined (USE_DISPLAY)
+    #if defined (USE_DISPLAY)
     if(get_contrast() == CONTRAST_AUTO) {
         display_wake(&display);
     }
@@ -821,6 +916,8 @@ int main() {
     state = get_state();
     set_context(CTX_INIT);
     set_low_batt(false);
+    set_midi_cc_last(MIDI_CC_NONE);
+    set_midi_pc_last(MIDI_CC_NONE);
     set_preset_slot(-1); // No slot selected
     set_scale_slot(-1);  // No slot selected
     set_preset_has_changes(false);

@@ -43,6 +43,14 @@ To make the instrument more expressive, an MPU-6050 IMU (Inertial Measurement Un
 
 From the IMU config screen, you can enable or disable pitch bending and filter cutoff modulation when the Dodepan is tilted on the X and Y axes.
 
+## Midi CC
+
+On the Midi CC screen, the pads stop playing notes and instead act as twelve momentary Midi CC controllers, each pad sending its own CC number (0-11). Touching a pad toggles its value between 127 and 0 on each successive touch, acting as an on/off switch. The screen displays the last CC number and value sent.
+
+## Midi Program Change
+
+The Midi Program Change screen works like the Midi CC screen, but each touch only sends a Midi Program Change message using the pad's id (0-11) as the program number. The screen displays the last program number sent.
+
 ## Automatic Save
 
 Dodepan automatically stores the current settings into its memory, with a configurable delay (default 10 seconds) to minimize flash wear. Stored settings are loaded automatically at startup.

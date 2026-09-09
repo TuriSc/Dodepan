@@ -276,6 +276,34 @@ void set_low_batt(bool low_batt) {
     state.low_batt = low_batt;
 }
 
+/* Midi CC */
+
+uint8_t get_midi_cc_last() {
+    return state.midi_cc_last;
+}
+
+void set_midi_cc_last(uint8_t cc) {
+    state.midi_cc_last = cc;
+}
+
+uint8_t get_midi_cc_last_value() {
+    return state.midi_cc_last_value;
+}
+
+void set_midi_cc_last_value(uint8_t value) {
+    state.midi_cc_last_value = value;
+}
+
+/* Midi Program Change */
+
+uint8_t get_midi_pc_last() {
+    return state.midi_pc_last;
+}
+
+void set_midi_pc_last(uint8_t pc) {
+    state.midi_pc_last = pc;
+}
+
 /* Parameter */
 
 uint8_t get_parameter() {
