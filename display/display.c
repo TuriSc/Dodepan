@@ -35,6 +35,8 @@
 
 static alarm_id_t display_dim_alarm_id;
 
+static volatile bool display_dim_requested = false;
+
 void display_init(ssd1306_t *p) {
     p->external_vcc=false;
     ssd1306_init(p, SSD1306_WIDTH, SSD1306_HEIGHT, SSD1306_ADDRESS, SSD1306_I2C_PORT);
@@ -355,7 +357,15 @@ void display_dim(ssd1306_t *p) {
 }
 
 int64_t display_dim_callback(alarm_id_t id, void * p) {
-    display_dim(p);
+    display_dim_requested = true;
+    return 0;
+}
+
+void display_dim_task(ssd1306_t *p) {
+    if (display_dim_requested) {
+        display_dim_requested = false;
+        display_dim(p);
+    }
 }
 
 void display_wake(ssd1306_t *p) {

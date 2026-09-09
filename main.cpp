@@ -917,6 +917,9 @@ int main() {
         encoder_poll_all_events();
         mpr121_task();
 
+#if defined (USE_DISPLAY)
+        display_dim_task(&display);
+#endif
 #if defined (USE_IMU)
         if(get_imu_axes() > 0) {
             imu_task(&imu_data);
