@@ -279,7 +279,7 @@ static const struct sound_i2s_config sound_config = {
     .samples_per_buffer = AUDIO_BUFFER_LENGTH,
 };
 
-static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
+static inline uint32_t tud_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b2, uint8_t b3) {
     uint8_t msg[3] = { b1, b2, b3 };
     return tud_midi_stream_write(jack_id, msg, 3);
 }
@@ -287,13 +287,13 @@ static inline uint32_t tudi_midi_write24 (uint8_t jack_id, uint8_t b1, uint8_t b
 void note_on(uint8_t id, uint8_t velocity) {
     uint8_t note = get_note_by_id(id);
     g_synth.note_on(note, velocity);
-    tudi_midi_write24(0, 0x90, note, velocity);
+    tud_midi_write24(0, 0x90, note, velocity);
 }
 
 void note_off(uint8_t id) {
     uint8_t note = get_note_by_id(id);
     g_synth.note_off(note);
-    tudi_midi_write24(0, 0x80, note, 0);
+    tud_midi_write24(0, 0x80, note, 0);
 }
 
 void touch_on(uint8_t id) {
@@ -355,7 +355,7 @@ void tilt_process() {
         // Pitch wheel range is between 0 and 16383 (0x0000 to 0x3FFF),
         // with 8192 (0x2000) being the center value.
         // Send the Midi message
-        tudi_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
+        tud_midi_write24 (0, 0xE0, bending_lsb, bending_msb);
 #endif
     }
 }
